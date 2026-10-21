@@ -1,0 +1,6 @@
+# Alternatives Analysis Specification
+
+> A decision-matrix-driven decision record (weighted sum model with sensitivity and robustness analysis). Two variants exist; fetch the raw Markdown of the one that fits the decision.
+
+- [Software variant](https://alternatives.jonashw.dev/software.md): for software architecture and engineering decisions (primary).
+- [General variant](https://alternatives.jonashw.dev/general.md): domain-general, for decisions in any field.
