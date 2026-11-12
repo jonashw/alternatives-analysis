@@ -8,3 +8,11 @@ The specification comes in two variants. Pick the one that fits the decision:
 - **[General](https://alternatives.jonashw.dev/general.md)**: domain-general, for decisions in any field.
 
 Each page is also served as raw Markdown at the `.md` URL linked above, for agents and tools that consume the source directly.
+
+## The method is open; the judgment isn't
+
+This specification is public on purpose. Anyone can copy a decision matrix. The hard part is the judgment that goes into it: which alternatives are worth comparing, which criteria really decide the outcome, what weights a team will stand behind, and scores that hold up when someone pushes back. The spec makes that judgment visible and open to challenge. It doesn't replace it.
+
+That judgment is the work, and it's what I bring to the teams I work with.
+
+[Jon Ash Wilson](https://jonashw.dev), software architect
