@@ -4,3 +4,4 @@
 
 - [Software variant](https://alternatives.jonashw.dev/software.md): for software architecture and engineering decisions (primary).
 - [General variant](https://alternatives.jonashw.dev/general.md): domain-general, for decisions in any field.
+- [Criteria Ranker](https://alternatives.jonashw.dev/toolkit/criteria-ranker.html): a one-page tool where the decision owner sets the weights by answering pairwise "which matters more?" questions. Replace its `DATA` block to reuse it. Engine: [pairwise.js](https://alternatives.jonashw.dev/toolkit/pairwise.js).

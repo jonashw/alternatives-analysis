@@ -10,3 +10,9 @@ Source for the Alternatives Analysis Specification site.
 Cross-links in the Markdown use absolute `https://alternatives.jonashw.dev/<name>.md` URLs so an agent reading the raw source can follow them. The HTML build rewrites them to `/<name>/`.
 
 Build locally with `build/build.sh` (needs pandoc); output goes to `_site/`. Pushes to `main` deploy via GitHub Actions.
+
+## Toolkit
+
+`toolkit/` holds the tools that go with the spec, served at `/toolkit/`. See `toolkit/README.md`. Tests: `node --test toolkit/pairwise.test.mjs`.
+
+This repo is owned by Jon's Career project, which makes all spec and tooling changes.

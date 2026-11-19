@@ -1,0 +1,319 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Criteria Ranker</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600&display=swap">
+<style>
+/* Layout: one working column on phones; ranking list left, live result right on wide screens. */
+:root{
+  --bg:#eef0f3; --panel:#ffffff; --fg:#16202b; --muted:#5a6775; --line:#d3d9e0;
+  --accent:#0b7a75; --accent-soft:#d6ecea; --win:#b56f0c; --win-soft:#f6e6cc; --ask:#7a4fb3;
+  --display:"Space Grotesk",system-ui,sans-serif; --body:"Inter",system-ui,sans-serif;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#12171d; --panel:#1b222b; --fg:#e6eaee; --muted:#9aa7b4; --line:#313b47;
+  --accent:#3fc1b8; --accent-soft:#17383a; --win:#e3a444; --win-soft:#3d2f17; --ask:#b596e6; color-scheme:dark } }
+:root[data-theme="dark"]{
+  --bg:#12171d; --panel:#1b222b; --fg:#e6eaee; --muted:#9aa7b4; --line:#313b47;
+  --accent:#3fc1b8; --accent-soft:#17383a; --win:#e3a444; --win-soft:#3d2f17; --ask:#b596e6; color-scheme:dark }
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:15px;line-height:1.45;
+  padding-block:20px 40px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:1040px;margin:0 auto;display:flex;flex-direction:column;gap:20px}
+h1{font-family:var(--display);font-size:1.6rem;margin:0;text-wrap:balance}
+h2{font-family:var(--display);font-size:1.05rem;margin:0}
+p{margin:0;max-width:65ch}
+.lede{color:var(--muted)}
+.cols{display:grid;grid-template-columns:minmax(0,1fr);gap:20px}
+@media (min-width:860px){.cols{grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);align-items:start}}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px;display:flex;flex-direction:column;gap:12px;min-width:0}
+ol.rank{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.item{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;align-items:center;
+  border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:var(--bg);touch-action:manipulation}
+.item.sortable-ghost{opacity:.35}
+.item.sortable-chosen{border-color:var(--accent)}
+.grip{cursor:grab;color:var(--muted);font-size:1.1rem;padding:6px 4px;touch-action:none;user-select:none}
+.pos{font-family:var(--display);font-variant-numeric:tabular-nums;color:var(--muted);min-width:1.4em;display:inline-block}
+.name{font-weight:500}
+.note{font-size:.82rem;color:var(--ask);margin-top:2px}
+.meter{height:5px;border-radius:3px;background:var(--accent-soft);margin-top:6px;overflow:hidden}
+.meter i{display:block;height:100%;background:var(--accent)}
+.side{display:flex;align-items:center;gap:6px}
+.pct{font-variant-numeric:tabular-nums;font-weight:600;min-width:3.2em;text-align:right}
+button{font:inherit;color:var(--fg);background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:6px 9px;cursor:pointer}
+button:hover{border-color:var(--accent)}
+button:focus-visible,.grip:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+button.primary{background:var(--accent);border-color:var(--accent);color:var(--panel);font-weight:600;padding:9px 14px}
+button:disabled{opacity:.35;cursor:default}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+fieldset{border:0;padding:0;margin:0;display:flex;flex-wrap:wrap;gap:6px 16px}
+legend{font-size:.82rem;color:var(--muted);padding:0;margin-bottom:4px}
+label.opt{display:flex;gap:6px;align-items:center}
+.alt{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 10px;align-items:baseline}
+.alt .bar{grid-column:1 / -1;height:10px;border-radius:5px;background:var(--accent-soft);overflow:hidden}
+.alt .bar i{display:block;height:100%;background:var(--accent)}
+.alt.win .bar i{background:var(--win)}
+.alt.win .aname{font-weight:600}
+.score{font-variant-numeric:tabular-nums;font-weight:600}
+.verdict{background:var(--win-soft);border-radius:8px;padding:10px 12px}
+.small{font-size:.85rem;color:var(--muted)}
+.tablebox{overflow-x:auto}
+table{border-collapse:collapse;font-size:.85rem;width:100%}
+th,td{border-bottom:1px solid var(--line);padding:5px 8px;text-align:left}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
+textarea{width:100%;box-sizing:border-box;font:inherit;font-size:.85rem;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:8px;min-height:7.5em}
+summary{cursor:pointer;font-weight:500}
+.ask{display:flex;flex-direction:column;gap:10px}
+.ask .pair{display:grid;grid-template-columns:minmax(0,1fr);gap:8px}
+@media (min-width:560px){.ask .pair{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}}
+.ask button.choice{text-align:left;padding:12px;min-height:64px;border-width:2px;font-weight:500}
+.ask button.choice:hover{border-color:var(--accent);background:var(--accent-soft)}
+.ask .q{font-family:var(--display);font-size:1.05rem}
+.tie{font-size:.78rem;color:var(--muted);margin-left:6px}
+[hidden]{display:none!important}
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Rank what matters for the team chat tool</h1>
+    <p class="lede">Put the criteria in order, most important at the top. Either answer a short run of "which matters more?" questions, or drag the list yourself. The weights and the winning option update as you go. When it looks right, copy the result and paste it into the thread.</p>
+  </header>
+
+  <section class="panel" aria-labelledby="h-ask">
+    <h2 id="h-ask">Answer questions instead of dragging</h2>
+    <div id="ask-idle" class="ask">
+      <p class="small">You compare two criteria at a time and the page sorts the list from your answers. The page never asks a pair whose answer it can already work out, so seven criteria take at most 14 questions and ten take at most 22 to 25. You can still drag afterwards.</p>
+      <div class="row"><button class="primary" id="ask-start" type="button">Start the questions</button><span class="small" id="ask-done" role="status"></span></div>
+    </div>
+    <div id="ask-live" class="ask" hidden>
+      <p class="small" id="ask-progress"></p>
+      <p class="q">Which matters more to you?</p>
+      <div class="pair"><button class="choice" id="ask-a" type="button"></button><button class="choice" id="ask-b" type="button"></button></div>
+      <div class="row"><button id="ask-same" type="button">About the same</button><button id="ask-back" type="button">Back one question</button><button id="ask-stop" type="button">Stop and keep the list as it was</button></div>
+    </div>
+  </section>
+
+  <div class="cols">
+    <section class="panel" aria-labelledby="h-rank">
+      <h2 id="h-rank">Your ranking</h2>
+      <p class="small">Drag by the handle, or use the arrows. Purple notes mark the spots the analyst was unsure about.</p>
+      <ol class="rank" id="rank"></ol>
+      <fieldset>
+        <legend>How steeply should the weights fall from top to bottom?</legend>
+        <label class="opt"><input type="radio" name="curve" id="curve-roc" value="roc" checked> Steep (top items dominate)</label>
+        <label class="opt"><input type="radio" name="curve" id="curve-sum" value="sum"> Gentle (even steps)</label>
+      </fieldset>
+      <div class="row">
+        <button id="reset" type="button">Restore the starting order</button>
+      </div>
+    </section>
+
+    <div style="display:flex;flex-direction:column;gap:20px;min-width:0">
+      <section class="panel" aria-labelledby="h-res">
+        <h2 id="h-res">Result with this ranking</h2>
+        <div class="verdict" id="verdict"></div>
+        <div id="alts" style="display:flex;flex-direction:column;gap:12px"></div>
+        <p class="small" id="robust"></p>
+      </section>
+
+      <section class="panel" aria-labelledby="h-copy">
+        <h2 id="h-copy">Send it back</h2>
+        <div class="row"><button class="primary" id="copy" type="button">Copy ranking</button><span class="small" id="copied" role="status"></span></div>
+        <textarea id="out" readonly aria-label="Ranking as text"></textarea>
+      </section>
+    </div>
+  </div>
+
+  <section class="panel">
+    <details>
+      <summary>Scores behind the result (1 poor to 5 excellent)</summary>
+      <div class="tablebox" style="margin-top:10px"><table id="scores"></table></div>
+      <p class="small" style="margin-top:8px">Scores stay fixed here. Only the weights change with your ranking. Notes on each criterion say which scores are measured and which are estimates.</p>
+    </details>
+  </section>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js"></script>
+<script>
+// Everything specific to this decision lives in DATA, so the page can be reused for another analysis.
+const DATA = {
+  // Example decision. Replace this whole block for a real analysis.
+  key: "example-chat-tool",
+  alternatives: ["A Hosted chat service", "B Self-hosted open source", "C Email lists only"],
+  criteria: [
+    {id:"COST", name:"Stays inside the budget", scores:[3,4,5]},
+    {id:"LEAVE", name:"Easy to leave later, data exports cleanly", scores:[2,5,5], note:"Unsure: does this outrank day-to-day ease?"},
+    {id:"EASE", name:"Easy for every member to use", scores:[5,3,4]},
+    {id:"UPKEEP", name:"Little upkeep for the team", scores:[5,2,4], note:"Self-hosted upkeep is an estimate."},
+    {id:"SEARCH", name:"Past discussions are easy to find", scores:[5,4,2]}
+  ],
+  draftWeights: {COST:20,LEAVE:20,EASE:25,UPKEEP:20,SEARCH:15}
+};
+const byId = Object.fromEntries(DATA.criteria.map(c => [c.id, c]));
+const startOrder = DATA.criteria.map(c => c.id);
+let order = startOrder.slice();
+const KEY = "rank-order-" + (DATA.key || "default");
+let ties = [];      // pairs [a, b] the owner called "about the same"; they share a weight while they sit next to each other
+let answers = [];   // the pairwise answers, kept as the record
+try { const s = JSON.parse(localStorage.getItem(KEY) || "null");
+  if (Array.isArray(s) && s.length === startOrder.length && s.every(x => byId[x])) order = s; } catch (e) {}
+function tied(a, b) { return ties.some(t => (t[0] === a && t[1] === b) || (t[0] === b && t[1] === a)); }
+
+function weights(n, curve) {
+  const w = [];
+  for (let i = 1; i <= n; i++) {
+    if (curve === "roc") { let s = 0; for (let k = i; k <= n; k++) s += 1 / k; w.push(s / n); }
+    else w.push(2 * (n + 1 - i) / (n * (n + 1)));
+  }
+  return w;
+}
+function totals(wById) {
+  return DATA.alternatives.map((_, j) => DATA.criteria.reduce((s, c) => s + wById[c.id] * c.scores[j], 0));
+}
+function curve() { return document.getElementById("curve-sum").checked ? "sum" : "roc"; }
+
+const list = document.getElementById("rank");
+function render() {
+  const w = weights(order.length, curve());
+  // Neighbours called "about the same" share the average of their positions' weights.
+  for (let i = 0; i < order.length; ) {
+    let j = i; while (j + 1 < order.length && tied(order[j], order[j + 1])) j++;
+    if (j > i) { let m = 0; for (let k = i; k <= j; k++) m += w[k]; m /= (j - i + 1); for (let k = i; k <= j; k++) w[k] = m; }
+    i = j + 1;
+  }
+  const wById = {}; order.forEach((id, i) => wById[id] = w[i]);
+  const max = Math.max(...w);
+  list.innerHTML = "";
+  order.forEach((id, i) => {
+    const c = byId[id];
+    const li = document.createElement("li"); li.className = "item"; li.dataset.id = id;
+    li.innerHTML =
+      '<span class="grip" aria-hidden="true">⠿</span>' +
+      '<div style="min-width:0"><div class="name"><span class="pos">' + (i + 1) + '</span> ' + c.name + ' <span class="small">(' + c.id + ')</span>' + (i > 0 && tied(order[i - 1], id) ? '<span class="tie">about the same as the one above</span>' : '') + '</div>' +
+      (c.note ? '<div class="note">' + c.note + '</div>' : '') +
+      '<div class="meter"><i style="width:' + (100 * w[i] / max).toFixed(1) + '%"></i></div></div>' +
+      '<div class="side"><span class="pct">' + (100 * w[i]).toFixed(1) + '%</span>' +
+      '<button type="button" data-move="-1" aria-label="Move ' + c.name + ' up"' + (i === 0 ? ' disabled' : '') + '>▲</button>' +
+      '<button type="button" data-move="1" aria-label="Move ' + c.name + ' down"' + (i === order.length - 1 ? ' disabled' : '') + '>▼</button></div>';
+    list.appendChild(li);
+  });
+
+  const v = totals(wById);
+  const rankIdx = v.map((_, j) => j).sort((a, b) => v[b] - v[a]);
+  const top = rankIdx[0], second = rankIdx[1], margin = v[top] - v[second];
+  document.getElementById("verdict").innerHTML =
+    '<strong>' + DATA.alternatives[top] + '</strong> wins with ' + v[top].toFixed(2) + ' of 5, ahead of ' +
+    DATA.alternatives[second] + ' by ' + margin.toFixed(2) + (margin / 4 < 0.05 ? '. That is a close call.' : '.');
+  const alts = document.getElementById("alts"); alts.innerHTML = "";
+  rankIdx.forEach(j => {
+    const d = document.createElement("div"); d.className = "alt" + (j === top ? " win" : "");
+    d.innerHTML = '<span class="aname">' + DATA.alternatives[j] + '</span><span class="score">' + v[j].toFixed(2) + '</span>' +
+      '<div class="bar"><i style="width:' + (100 * v[j] / 5).toFixed(1) + '%"></i></div>';
+    alts.appendChild(d);
+  });
+
+  // Robustness: jiggle every weight by up to 20% either way, 2,000 times, with a fixed seed.
+  let seed = 20261118; const rnd = () => (seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296;
+  const wins = DATA.alternatives.map(() => 0), N = 2000;
+  for (let t = 0; t < N; t++) {
+    const p = {}; let s = 0;
+    order.forEach(id => { p[id] = wById[id] * (0.8 + 0.4 * rnd()); s += p[id]; });
+    order.forEach(id => p[id] /= s);
+    const tv = totals(p); wins[tv.indexOf(Math.max(...tv))]++;
+  }
+  const dv = totals(Object.fromEntries(Object.entries(DATA.draftWeights).map(([k, x]) => [k, x / 100])));
+  const draftTop = dv.indexOf(Math.max(...dv));
+  document.getElementById("robust").textContent =
+    'When every weight is varied by 20% either way, ' + DATA.alternatives[top] + ' still wins ' +
+    Math.round(100 * wins[top] / N) + '% of 2,000 trials. ' +
+    (draftTop === top ? "The analyst's draft weights picked the same winner." : "The analyst's draft weights picked " + DATA.alternatives[draftTop] + " instead.");
+
+  document.getElementById("out").value =
+    "My ranking (" + (curve() === "roc" ? "steep" : "gentle") + " weights):\n" +
+    order.map((id, i) => (i + 1) + ". " + id + " " + byId[id].name + " (" + (100 * w[i]).toFixed(1) + "%)" + (i > 0 && tied(order[i - 1], id) ? " [about the same as the one above]" : "")).join("\n") +
+    "\nWinner: " + DATA.alternatives[top] + " " + v[top].toFixed(2) + ", then " + DATA.alternatives[second] + " " + v[second].toFixed(2) +
+    (answers.length ? "\nSet by " + answers.length + " pairwise answers: " + answers.map(a => a.ans === "same" ? a.a + " = " + a.b : (a.ans === "a" ? a.a + " > " + a.b : a.b + " > " + a.a)).join(", ") : "");
+  try { localStorage.setItem(KEY, JSON.stringify(order)); } catch (e) {}
+}
+
+list.addEventListener("click", e => {
+  const b = e.target.closest("button[data-move]"); if (!b) return;
+  const id = b.closest(".item").dataset.id, i = order.indexOf(id), j = i + Number(b.dataset.move);
+  if (j < 0 || j >= order.length) return;
+  order.splice(i, 1); order.splice(j, 0, id); ties = []; answers = []; render();
+  const again = list.querySelector('.item[data-id="' + id + '"] button[data-move="' + b.dataset.move + '"]');
+  if (again && !again.disabled) again.focus();
+});
+if (window.Sortable) {
+  Sortable.create(list, { handle: ".grip", animation: 150, onEnd: () => {
+    order = Array.from(list.children).map(li => li.dataset.id); ties = []; answers = []; render(); } });
+}
+document.getElementById("curve-roc").addEventListener("change", render);
+document.getElementById("curve-sum").addEventListener("change", render);
+document.getElementById("reset").addEventListener("click", () => { order = startOrder.slice(); ties = []; answers = []; render(); });
+
+// Pairwise mode: binary insertion sort with the owner's judgement as the comparison.
+// Each criterion is placed among those already sorted by asking "which matters more?" against the middle one.
+const $ = id => document.getElementById(id);
+let pw = null, pwHistory = [];
+function pwShuffle(ids) { let seed = 7; const r = () => (seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296;
+  const a = ids.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+function pwWorst(n) { let t = 0; for (let i = 1; i < n; i++) t += Math.ceil(Math.log2(i + 1)); return t; }
+function pwStart() {
+  const q = pwShuffle(startOrder);
+  pw = { queue: q.slice(1), sorted: [q[0]], cur: null, lo: 0, hi: 0, ties: [], answers: [] };
+  pwHistory = []; $("ask-idle").hidden = true; $("ask-live").hidden = false; $("ask-done").textContent = ""; pwNext();
+}
+function pwNext() {
+  for (;;) {
+    if (pw.cur === null) {
+      if (!pw.queue.length) return pwFinish();
+      pw.cur = pw.queue.shift(); pw.lo = 0; pw.hi = pw.sorted.length;
+    }
+    if (pw.lo >= pw.hi) { pw.sorted.splice(pw.lo, 0, pw.cur); pw.cur = null; continue; }
+    break;
+  }
+  const other = pw.sorted[(pw.lo + pw.hi) >> 1];
+  $("ask-a").textContent = byId[pw.cur].name; $("ask-b").textContent = byId[other].name;
+  const placed = pw.sorted.length, left = pw.queue.length + 1;
+  $("ask-progress").textContent = "Question " + (pw.answers.length + 1) + " of at most " + (pw.answers.length + pwRemainingWorst()) +
+    ". " + placed + " of " + startOrder.length + " criteria placed.";
+  $("ask-back").disabled = pwHistory.length === 0;
+}
+function pwRemainingWorst() {
+  let t = pw.cur === null ? 0 : Math.ceil(Math.log2(pw.hi - pw.lo + 1)); let n = pw.sorted.length + (pw.cur === null ? 0 : 1);
+  for (let k = 0; k < pw.queue.length; k++) { t += Math.ceil(Math.log2(n + 1)); n++; } return t;
+}
+function pwAnswer(ans) {
+  pwHistory.push(JSON.stringify(pw));
+  const mid = (pw.lo + pw.hi) >> 1, other = pw.sorted[mid];
+  pw.answers.push({ a: pw.cur, b: other, ans });
+  if (ans === "a") pw.hi = mid; else if (ans === "b") pw.lo = mid + 1;
+  else { pw.ties.push([pw.cur, other]); pw.sorted.splice(mid + 1, 0, pw.cur); pw.cur = null; }
+  pwNext();
+}
+function pwFinish() {
+  order = pw.sorted.slice(); ties = pw.ties.slice(); answers = pw.answers.slice(); pw = null;
+  $("ask-live").hidden = true; $("ask-idle").hidden = false;
+  $("ask-done").textContent = "Done. " + answers.length + " answers set the order below. Check it, adjust by dragging if needed, then copy it.";
+  $("ask-start").textContent = "Start the questions again"; render();
+}
+$("ask-start").addEventListener("click", pwStart);
+$("ask-a").addEventListener("click", () => pwAnswer("a"));
+$("ask-b").addEventListener("click", () => pwAnswer("b"));
+$("ask-same").addEventListener("click", () => pwAnswer("same"));
+$("ask-back").addEventListener("click", () => { if (pwHistory.length) { pw = JSON.parse(pwHistory.pop()); pwNext(); } });
+$("ask-stop").addEventListener("click", () => { pw = null; $("ask-live").hidden = true; $("ask-idle").hidden = false; });
+document.getElementById("copy").addEventListener("click", () => {
+  const out = document.getElementById("out"), msg = document.getElementById("copied");
+  const fallback = () => { out.focus(); out.select(); msg.textContent = "Selected. Copy it from here."; };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(out.value).then(() => { msg.textContent = "Copied. Paste it into the thread."; }, fallback);
+  } else fallback();
+});
+
+const st = document.getElementById("scores");
+st.innerHTML = "<tr><th>Criterion</th>" + DATA.alternatives.map(a => '<th class="n">' + a.split(" ")[0] + "</th>").join("") + "</tr>" +
+  DATA.criteria.map(c => "<tr><td>" + c.id + " " + c.name + "</td>" + c.scores.map(s => '<td class="n">' + s + "</td>").join("") + "</tr>").join("");
+render();
+</script>
