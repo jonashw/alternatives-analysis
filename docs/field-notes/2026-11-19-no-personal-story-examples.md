@@ -8,4 +8,6 @@ Situation: The Storytelling variant carried examples from Jon's House Party stor
 Jon said: "let's see what neutral ones would be"
 Jon said: "No, I want those generalized or removed as well"
 Observed: Every House Party trace was generalized: names, the worked example, toys, party and guests.
-Inferred (my reading): The public spec should carry no traces of Jon's personal projects, not just no names.
+Jon said, asked whether to keep a colleague's name on the page: "\"a colleague\""
+Observed: The colleague's name was replaced with "a colleague".
+Inferred (my reading): The public spec should carry no traces of Jon's personal projects or private people, not just no names.

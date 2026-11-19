@@ -44,7 +44,7 @@ Apply these tests to a proposed story decision. If **any** test is true, an AA i
 | 4 | **Theme or arc** | Does it change what the story is *about*, or where a character's arc goes? |
 | 5 | **Audience exposure** | Will it reach an audience it could mislead or hurt, such as children or a live audience? |
 
-**Two-way doors.** A two-way door is a decision you can walk through, and walk back through if you don't like what's on the other side. It's an opportunity to explore freely, without permanent commitment. If a decision is a two-way door and low leverage, don't run an AA: try it. (Jon credits his colleague Arnav with connecting the two-way-door idea to this method. The one-way and two-way door phrasing is widely associated with Jeff Bezos's 2015 Amazon shareholder letter.)
+**Two-way doors.** A two-way door is a decision you can walk through, and walk back through if you don't like what's on the other side. It's an opportunity to explore freely, without permanent commitment. If a decision is a two-way door and low leverage, don't run an AA: try it. (Jon credits a colleague with connecting the two-way-door idea to this method. The one-way and two-way door phrasing is widely associated with Jeff Bezos's 2015 Amazon shareholder letter.)
 
 ### Short-Circuit Rules
 
@@ -261,7 +261,7 @@ A simple table or hand sketch is acceptable. Where a reproducible format is pref
 - **Trey Parker and Matt Stone** (NYU, mtvU *Stand In*, 2011): replace "and then" with "therefore" or "but".
 - **Stuart Pugh:** the concept-selection matrix, which compares options and then combines their strengths into hybrids.
 - **Fritz Zwicky:** morphological analysis, a box of combinations for generating options.
-- **Two-way doors:** Jeff Bezos (2015 Amazon shareholder letter). Jon's colleague Arnav connected the idea to this method.
+- **Two-way doors:** Jeff Bezos (2015 Amazon shareholder letter). A colleague of Jon's connected the idea to this method.
 
 ## First worked example
 
