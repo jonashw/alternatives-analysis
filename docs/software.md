@@ -2,7 +2,7 @@
 
 > A decision-matrix-driven ADR: the decision is the output of a weighted comparison of viable alternatives, not an assertion made up front.
 >
-> **Method:** A weighted decision matrix scored with the **Weighted Sum Model (WSM)**, also known as Simple Additive Weighting (SAW), a standard **multi-criteria decision analysis (MCDA)** technique, paired with explicit sensitivity and robustness analysis (dominance check, winning-margin and critical-weight analysis, and Monte Carlo weight simulation).
+> **Method:** A weighted decision matrix scored with the **Weighted Sum Model (WSM)**, also known as Simple Additive Weighting (SAW), a standard **multi-criteria decision analysis (MCDA)** technique, with weights set by the decision owner through ordinal pairwise ranking, paired with explicit sensitivity and robustness analysis (dominance check, winning-margin and critical-weight analysis, Monte Carlo weight simulation, and rank-order, swap and score-flip tests).
 >
 > **Scope:** This specification is contextualized to **software** architecture and engineering decisions. A [general-purpose variant](https://alternatives.jonashw.dev/general.md) for non-software decisions is maintained separately.
 
@@ -135,6 +135,27 @@ Organize criteria into layers:
 4. **Include a summary row.** The final row must show the total weighted score ($V_j$) for each alternative.
 5. **Negative criteria.** For criteria where lower is better (cost, risk, complexity), invert the scale so that a higher score still means "more desirable" — or document the inversion explicitly.
 
+##### Weight Elicitation
+
+The decision owner sets the weights, not the analyst. The analyst drafts weights to start the analysis, then hands the ranking to the owner. The owner's ranking becomes the **weights of record**.
+
+1. **Draft, then find what matters.** Score with draft weights and run the critical-weight analysis (see Robustness) first. Weights that cannot change the winner need little of the owner's time.
+2. **Rank, don't rate.** The owner orders the criteria from most to least important. Ordering is easier to do honestly than assigning numbers, and it is easier to defend.
+3. **Sort by pairwise questions.** Ask the owner one question at a time, "Which matters more to you, A or B?", and sort the criteria from the answers with a **binary insertion sort**, using the owner's judgment as the comparison:
+   - **Answers.** The owner picks one of the two, or "about the same", which records a tie. There are no strength levels and no ratio judgments. The method is ordinal; it is not AHP.
+   - **Fewest questions.** Binary insertion never asks a pair whose answer is already implied. Seven criteria take at most 14 questions, ten at most 22 to 25 (bubble sort can need 45).
+   - **No leading.** Shuffle the starting order with a fixed seed, so the analyst's draft order does not steer the owner.
+   - **Undo.** Let the owner take back the last answer at any time.
+   - **Consistency.** One insertion run cannot contradict itself, because it never asks an implied pair. To test consistency, optionally re-ask a few neighbouring pairs at the end, nearest the top first; a reversal or "about the same" turns that pair into a tie.
+   - **Seeding.** Either/or answers the owner already gave in discussion may seed the sort.
+4. **Or drag.** As an alternative, the owner drags a list into order. Where the owner has done both and the orders differ, the owner picks which one is the record.
+5. **Convert the order to weights.** Record which conversion was used. For $n$ criteria ranked $i = 1 \dots n$:
+   - **Steep** (rank-order centroid): $W_i = \frac{1}{n}\sum_{k=i}^{n}\frac{1}{k}$
+   - **Gentle** (rank-sum): $W_i = \frac{2(n + 1 - i)}{n(n + 1)}$
+   - **Ties.** Tied neighbours share the mean of the weights for the ranks they span.
+6. **Keep the record.** Record the owner's ranking, the conversion, and the full list of pairwise answers (for example `A > B, C = D`) verbatim. The answers justify the ranking later. Keep the draft weights in the document for comparison.
+7. **Use a live tool.** Give the owner a page that asks the questions (and allows dragging), shows the weights and the winning alternative live, and returns the ranking and answers as text to paste back. A reusable one is the [Criteria Ranker](https://alternatives.jonashw.dev/toolkit/criteria-ranker.html).
+
 ##### Robustness
 
 A weighted score is only as trustworthy as its weights, which are the most subjective input in the model. Because weights can never be proven non-arbitrary on their own, **every AA with two or more alternatives must test how sensitive the result is to them.** Report the following:
@@ -154,6 +175,16 @@ The criterion with the smallest feasible $|\delta_k|$ — one that keeps $W_k + 
    - **Iterations.** Run at least 1,000 trials (10,000 when the margin is close).
    - **Reproducibility.** Fix and record the random seed so the result can be audited and regenerated.
    - **Report.** For each alternative, the fraction of trials in which it ranks first ("win probability"). Treat a top alternative that wins in a clear majority of trials as robust; otherwise flag the decision as weight-sensitive and justify the final choice on other grounds.
+
+5. **Order-consistent simulation.** Once the owner has ranked the criteria, sample at least 10,000 random weight vectors that keep the owner's rank order (draw uniform values, sort them to match the order, normalize). Report win probabilities. This tests the ranking itself, independent of the conversion formula.
+
+6. **Adjacent-swap test.** Swap each pair of neighbours in the owner's ranking, one at a time, and report any swap that changes the winner.
+
+7. **Single-score flip test.** Weights are not the only subjective input. Move each score by one point, one at a time, and list every change that flips the winner.
+
+8. **Score-and-weight simulation.** Jitter the least certain scores by one point together with the weights, and report win probabilities.
+
+9. **Name the hinge.** State in one sentence what the decision actually depends on (a weight, a score, or neither), and put that question to the owner directly. Say which inputs are measured and which are estimates.
 
 ### Diagrams
 
