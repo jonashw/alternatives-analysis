@@ -4,7 +4,7 @@
 >
 > **Method:** A weighted decision matrix scored with the **Weighted Sum Model (WSM)**, also known as Simple Additive Weighting (SAW), a standard **multi-criteria decision analysis (MCDA)** technique, with weights set by the director through ordinal pairwise ranking, paired with explicit sensitivity and robustness analysis (dominance check, winning-margin and critical-weight analysis, score flip points, and Monte Carlo simulation), plus **viability gates** that veto options without hiding them.
 >
-> **Scope:** This specification is contextualized to **storytelling and storycrafting**: stories, scripts, cutscenes, characters and lore, and any authored sequence an audience lives through (including toy autopilot sequences and live "Moments"). A [general-purpose variant](https://alternatives.jonashw.dev/general.md) and a [software variant](https://alternatives.jonashw.dev/software.md) are maintained separately.
+> **Scope:** This specification is contextualized to **storytelling and storycrafting**: stories, scripts, cutscenes, characters and lore, and any authored sequence an audience lives through (including interactive and live sequences). A [general-purpose variant](https://alternatives.jonashw.dev/general.md) and a [software variant](https://alternatives.jonashw.dev/software.md) are maintained separately.
 >
 > **Status:** Version 1, adopted for use 2026-11-12. Proven on one story so far. To be tested and refined across many.
 
@@ -39,10 +39,10 @@ Apply these tests to a proposed story decision. If **any** test is true, an AA i
 | # | Test | Ask yourself… |
 |---|------|---------------|
 | 1 | **Leverage** | Does it open, or close, an enormous number of future opportunities in one stroke? Count both kinds: good things that become possible, and openings for mistakes, contradictions or catastrophe. |
-| 2 | **One-way door (canon lock)** | Once later scenes, episodes or toys build on it, would it be hard to undo? |
+| 2 | **One-way door (canon lock)** | Once later scenes, episodes or spin-offs build on it, would it be hard to undo? |
 | 3 | **Source fidelity** | Does it touch the source author's own words, characters or established lore? |
 | 4 | **Theme or arc** | Does it change what the story is *about*, or where a character's arc goes? |
-| 5 | **Audience exposure** | Will it reach an audience it could mislead or hurt, such as kids, guests, or a live party? |
+| 5 | **Audience exposure** | Will it reach an audience it could mislead or hurt, such as children or a live audience? |
 
 **Two-way doors.** A two-way door is a decision you can walk through, and walk back through if you don't like what's on the other side. It's an opportunity to explore freely, without permanent commitment. If a decision is a two-way door and low leverage, don't run an AA: try it. (Jon credits his colleague Arnav with connecting the two-way-door idea to this method. The one-way and two-way door phrasing is widely associated with Jeff Bezos's 2015 Amazon shareholder letter.)
 
@@ -67,7 +67,7 @@ Apply these tests to a proposed story decision. If **any** test is true, an AA i
 | **Yes, and riff** | Generating options before any judgment. |
 | **But / Therefore pass** | Checking a sequence of beats for loose joints. |
 | **Morphological box** (Fritz Zwicky) | Exploring every combination of a few dimensions, such as agency × empowerment for two characters. |
-| **Playtest / table read** | Hearing how a real audience (a child, guests) reacts. |
+| **Playtest / table read** | Hearing how a real audience (a test reader, a small audience) reacts. |
 
 ---
 
@@ -109,7 +109,7 @@ Effort replaces cost. Measure it as **time to a proof of concept**, meaning how 
 
 #### Positive Impacts
 
-- Opportunities this opens: later episodes, toys, jokes, themes.
+- Opportunities this opens: later episodes, spin-offs, jokes, themes.
 
 #### Negative Impacts
 
@@ -141,7 +141,7 @@ The vetoed option stays visible in the matrix, which is the log. Robustness anal
 
 1. **At least one wild option.** Include one option that is deliberately bold or strange. The matrix tends to reward safe choices, and this rule pushes back.
 2. **Generate before judging.** Collect options with "yes, and" before anyone scores.
-3. **Plain names.** Name options for what they are ("the stolen body"), not by letter.
+3. **Plain names.** Name options for what they are ("the borrowed map"), not by letter.
 4. **Label authorship.** Mark which options come from the source and which were added, and by whom.
 
 #### Option 1
@@ -179,7 +179,7 @@ Organize criteria into layers:
 2. **Meaning**: theme, character arc, agency and empowerment, the story's dualities.
 3. **Audience Experience**: **delight** (surprise, joy, the "oh!"), humour and tone, clarity for the intended audience.
 4. **Production Fit**: time to a proof of concept, effort to finish, assets reused.
-5. **Future**: room for later episodes, toys and Moments, and homage without copying.
+5. **Future**: room for later episodes and spin-offs, and homage without copying.
 
 > When selecting criteria, make sure the non-obvious obligations are rows rather than afterthoughts: continuity with other scenes, audience safety beyond the gates, and how the choice reads to someone who hasn't seen the rest.
 
@@ -223,7 +223,7 @@ A margin is **close** when $\bar{\Delta} < 0.05$. **In a story AA, a close margi
 
 3. **Critical-weight (flip-point) analysis.** For each criterion $k$, compute the smallest change $\delta_k$ to its weight that would reverse the top two options, holding scores fixed and renormalizing the remaining weights proportionally:
 $$\delta_k = \frac{\Delta}{\dfrac{\Delta - W_k d_k}{1 - W_k} - d_k}, \qquad d_k = S_{k,(1)} - S_{k,(2)}$$
-The criterion with the smallest feasible $|\delta_k|$ is the **most critical criterion**. Report what it means in story terms (for example, "the chest wins only because it is cheaper to show").
+The criterion with the smallest feasible $|\delta_k|$ is the **most critical criterion**. Report what it means in story terms (for example, "the storm scene wins only because it is cheaper to show").
 
 4. **Score flip points.** Because story scores are judgments, also report the smallest change to a single score, or a pair of scores, that would flip the result, and name who made those calls.
 
@@ -239,13 +239,13 @@ The criterion with the smallest feasible $|\delta_k|$ is the **most critical cri
 
 ### Closing Pass: But / Therefore
 
-After choosing, write the chosen beats as a chain with the joining word between each one: *therefore*, *but* or *and then*. Remove each beat in turn. If nothing after it breaks, the beat is loose: fix it, or keep it on purpose with a reason. Idle loops in toys, slice-of-life moments and kishōtenketsu turns are legitimate reasons.
+After choosing, write the chosen beats as a chain with the joining word between each one: *therefore*, *but* or *and then*. Remove each beat in turn. If nothing after it breaks, the beat is loose: fix it, or keep it on purpose with a reason. Idle loops in interactive pieces, slice-of-life moments and kishōtenketsu turns are legitimate reasons.
 
 ### Diagrams
 
 Include diagrams or other visuals where they clarify the story or distinguish options. At minimum:
 
-- **Context diagram:** the decision in the story world. Which characters, scenes, episodes and toys it touches, and where canon is fixed.
+- **Context diagram:** the decision in the story world. Which characters, scenes, episodes and spin-offs it touches, and where canon is fixed.
 - **Per-option sketch:** for each viable option, a beat strip or flow showing how the sequence differs, or a character sketch where the choice is visual.
 
 A simple table or hand sketch is acceptable. Where a reproducible format is preferred, use a code-first, text-based one (e.g., Mermaid). Agent-harness visualization features (interactive widgets, canvases) are equally acceptable where they aid understanding.
@@ -265,4 +265,4 @@ A simple table or hand sketch is acceptable. Where a reproducible format is pref
 
 ## First worked example
 
-"Cortex and Yanchi's bodies" (House Party, 2026-11-12). Both questions came down to a director's call between strong options. The best outcome was a hybrid the director proposed after reading the scores ("the rebuild").
+Two characters' origins (2026-11-12). Both questions came down to a director's call between strong options. The best outcome was a hybrid the director proposed after reading the scores.
