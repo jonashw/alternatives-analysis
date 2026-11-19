@@ -1,7 +1,8 @@
 # Alternatives Analysis Specification
 
-> A decision-matrix-driven decision record (weighted sum model with sensitivity and robustness analysis). Two variants exist; fetch the raw Markdown of the one that fits the decision.
+> A decision-matrix-driven decision record (weighted sum model with sensitivity and robustness analysis). Three variants exist; fetch the raw Markdown of the one that fits the decision.
 
 - [Software variant](https://alternatives.jonashw.dev/software.md): for software architecture and engineering decisions (primary).
 - [General variant](https://alternatives.jonashw.dev/general.md): domain-general, for decisions in any field.
+- [Storytelling variant](https://alternatives.jonashw.dev/storytelling.md): for story decisions (scripts, cutscenes, characters, lore).
 - [Criteria Ranker](https://alternatives.jonashw.dev/toolkit/criteria-ranker.html): a one-page tool where the decision owner sets the weights by answering pairwise "which matters more?" questions. Replace its `DATA` block to reuse it. Engine: [pairwise.js](https://alternatives.jonashw.dev/toolkit/pairwise.js).

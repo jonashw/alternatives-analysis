@@ -4,7 +4,7 @@
 >
 > **Method:** A weighted decision matrix scored with the **Weighted Sum Model (WSM)**, also known as Simple Additive Weighting (SAW), a standard **multi-criteria decision analysis (MCDA)** technique, with weights set by the decision owner through ordinal pairwise ranking, paired with explicit sensitivity and robustness analysis (dominance check, winning-margin and critical-weight analysis, Monte Carlo weight simulation, and rank-order, swap and score-flip tests).
 >
-> **Scope:** This specification is **domain-general** and applies to decisions in any field. A [software-specific variant](https://alternatives.jonashw.dev/software.md) contextualized to architecture and engineering is maintained separately.
+> **Scope:** This specification is **domain-general** and applies to decisions in any field. A [software-specific variant](https://alternatives.jonashw.dev/software.md) contextualized to architecture and engineering and a [storytelling variant](https://alternatives.jonashw.dev/storytelling.md) for story decisions are maintained separately.
 
 ## Required Content
 

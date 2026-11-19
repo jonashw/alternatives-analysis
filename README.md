@@ -4,6 +4,7 @@ Source for the Alternatives Analysis Specification site.
 
 - `docs/software.md`: software variant (primary), served at `/software/` and raw at `/software.md`
 - `docs/general.md`: general variant, served at `/general/` and raw at `/general.md`
+- `docs/storytelling.md`: storytelling variant, served at `/storytelling/` and raw at `/storytelling.md`
 - `docs/index.md`: landing page, served at `/` and raw at `/index.md`
 - `llms.txt`: agent index at `/llms.txt`
 
