@@ -32,35 +32,42 @@ const worstFor = (span) => Math.ceil(Math.log2(span + 1));
  * Where the run stands.
  * - question: the next pair to ask, { a, b }, or null when the order is complete
  * - order: the items placed so far, best first
- * - ties: pairs answered "about the same" that sit next to each other in the order
+ * - groups: the order as tie groups, best first; members of a group are "about the same"
+ * - ties: neighbouring pairs inside each group (a group of three gives two pairs)
  * - used: the answers that decided the order, in the order they were needed (the record)
  * - remaining: the most questions still to come
  */
 export const read = ({ ids, answers }) => {
   const known = lookup(answers);
-  const order = [];
-  const ties = [];
+  // Tie groups, best first. "About the same" joins the item to a whole group, so a group
+  // always stays together and every member shares its place, whatever order answers came in.
+  const groups = [];
   const used = [];
+  const snapshot = () => {
+    const order = groups.flat();
+    const ties = groups.flatMap(g => g.slice(1).map((id, k) => [g[k], id]));
+    return { order, ties, groups: groups.map(g => g.slice()) };
+  };
   for (let i = 0; i < ids.length; i++) {
     const item = ids[i];
-    if (order.length === 0) { order.push(item); continue; }
-    let lo = 0, hi = order.length, placed = false;
+    if (groups.length === 0) { groups.push([item]); continue; }
+    let lo = 0, hi = groups.length, placed = false;
     while (lo < hi) {
-      const mid = (lo + hi) >> 1, other = order[mid];
+      const mid = (lo + hi) >> 1, other = groups[mid][0];
       const result = known(item, other);
       if (result === undefined) {
         let remaining = worstFor(hi - lo);
-        for (let n = order.length + 1, k = i + 1; k < ids.length; k++, n++) remaining += worstFor(n);
-        return { question: { a: item, b: other }, order, ties, used, remaining, done: false };
+        for (let n = groups.length + 1, k = i + 1; k < ids.length; k++, n++) remaining += worstFor(n);
+        return { question: { a: item, b: other }, ...snapshot(), used, remaining, done: false };
       }
       used.push(result === '<' ? { a: other, b: item, result: '>' } : { a: item, b: other, result });
       if (result === '>') hi = mid;
       else if (result === '<') lo = mid + 1;
-      else { ties.push([other, item]); order.splice(mid + 1, 0, item); placed = true; break; }
+      else { groups[mid].push(item); placed = true; break; }
     }
-    if (!placed) order.splice(lo, 0, item);
+    if (!placed) groups.splice(lo, 0, [item]);
   }
-  return { question: null, order, ties, used, remaining: 0, done: true };
+  return { question: null, ...snapshot(), used, remaining: 0, done: true };
 };
 
 /** Answer the current question: `preferred` is the id the person chose, or "=" for about the same. */

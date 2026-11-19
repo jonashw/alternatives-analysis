@@ -65,3 +65,19 @@ test('check questions re-ask neighbours, and a reversal becomes a tie', () => {
   assert.deepEqual(checked.order, ['a', 'b', 'c', 'd']);
   assert.deepEqual(checked.ties, [['a', 'b']]);
 });
+
+test('"about the same" chains into one tie group, whatever order the answers come in', () => {
+  // Five criteria tied at the top, one below, as in a real run: A = B, B = C and C = D must make one group.
+  const scores = { AL2: 2, AL3: 2, AL4: 2, AL5: 2, AL10: 2, EFFORT: 1 };
+  const ids = Object.keys(scores);
+  const perms = xs => xs.length < 2 ? [xs] : xs.flatMap((x, i) => perms([...xs.slice(0, i), ...xs.slice(i + 1)]).map(p => [x, ...p]));
+  for (const p of perms(ids)) {
+    const { state } = judge(scores)(start(p));
+    const { order, ties, groups } = read(state);
+    assert.equal(order.at(-1), 'EFFORT', p.join(','));
+    assert.equal(groups.length, 2, p.join(','));
+    assert.deepEqual([...groups[0]].sort(), ['AL10', 'AL2', 'AL3', 'AL4', 'AL5']);
+    // Every neighbour inside the group is recorded as tied, so the chain is unbroken.
+    for (let k = 0; k + 1 < 5; k++) assert.ok(ties.some(t => t.includes(order[k]) && t.includes(order[k + 1])), p.join(','));
+  }
+});

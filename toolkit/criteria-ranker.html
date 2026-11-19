@@ -153,11 +153,13 @@ const byId = Object.fromEntries(DATA.criteria.map(c => [c.id, c]));
 const startOrder = DATA.criteria.map(c => c.id);
 let order = startOrder.slice();
 const KEY = "rank-order-" + (DATA.key || "default");
-let ties = [];      // pairs [a, b] the owner called "about the same"; they share a weight while they sit next to each other
+let ties = [];      // pairs [a, b] the owner called "about the same"; ties chain, so A = B and B = C put all three in one group
 let answers = [];   // the pairwise answers, kept as the record
 try { const s = JSON.parse(localStorage.getItem(KEY) || "null");
   if (Array.isArray(s) && s.length === startOrder.length && s.every(x => byId[x])) order = s; } catch (e) {}
-function tied(a, b) { return ties.some(t => (t[0] === a && t[1] === b) || (t[0] === b && t[1] === a)); }
+function tieRoot(id) { const parent = {}; const find = x => parent[x] === undefined || parent[x] === x ? x : (parent[x] = find(parent[x]));
+  ties.forEach(([a, b]) => { const ra = find(a), rb = find(b); if (ra !== rb) parent[ra] = rb; }); return find(id); }
+function tied(a, b) { return tieRoot(a) === tieRoot(b); }
 
 function weights(n, curve) {
   const w = [];
@@ -261,7 +263,7 @@ function pwShuffle(ids) { let seed = 7; const r = () => (seed = (seed * 1664525 
 function pwWorst(n) { let t = 0; for (let i = 1; i < n; i++) t += Math.ceil(Math.log2(i + 1)); return t; }
 function pwStart() {
   const q = pwShuffle(startOrder);
-  pw = { queue: q.slice(1), sorted: [q[0]], cur: null, lo: 0, hi: 0, ties: [], answers: [] };
+  pw = { queue: q.slice(1), sorted: [[q[0]]], cur: null, lo: 0, hi: 0, answers: [] };  // sorted holds tie groups, best first
   pwHistory = []; $("ask-idle").hidden = true; $("ask-live").hidden = false; $("ask-done").textContent = ""; pwNext();
 }
 function pwNext() {
@@ -270,12 +272,12 @@ function pwNext() {
       if (!pw.queue.length) return pwFinish();
       pw.cur = pw.queue.shift(); pw.lo = 0; pw.hi = pw.sorted.length;
     }
-    if (pw.lo >= pw.hi) { pw.sorted.splice(pw.lo, 0, pw.cur); pw.cur = null; continue; }
+    if (pw.lo >= pw.hi) { pw.sorted.splice(pw.lo, 0, [pw.cur]); pw.cur = null; continue; }
     break;
   }
-  const other = pw.sorted[(pw.lo + pw.hi) >> 1];
+  const other = pw.sorted[(pw.lo + pw.hi) >> 1][0];
   $("ask-a").textContent = byId[pw.cur].name; $("ask-b").textContent = byId[other].name;
-  const placed = pw.sorted.length, left = pw.queue.length + 1;
+  const placed = pw.sorted.flat().length, left = pw.queue.length + 1;
   $("ask-progress").textContent = "Question " + (pw.answers.length + 1) + " of at most " + (pw.answers.length + pwRemainingWorst()) +
     ". " + placed + " of " + startOrder.length + " criteria placed.";
   $("ask-back").disabled = pwHistory.length === 0;
@@ -286,14 +288,14 @@ function pwRemainingWorst() {
 }
 function pwAnswer(ans) {
   pwHistory.push(JSON.stringify(pw));
-  const mid = (pw.lo + pw.hi) >> 1, other = pw.sorted[mid];
+  const mid = (pw.lo + pw.hi) >> 1, other = pw.sorted[mid][0];
   pw.answers.push({ a: pw.cur, b: other, ans });
   if (ans === "a") pw.hi = mid; else if (ans === "b") pw.lo = mid + 1;
-  else { pw.ties.push([pw.cur, other]); pw.sorted.splice(mid + 1, 0, pw.cur); pw.cur = null; }
+  else { pw.sorted[mid].push(pw.cur); pw.cur = null; }  // joins the whole group, so ties stay together
   pwNext();
 }
 function pwFinish() {
-  order = pw.sorted.slice(); ties = pw.ties.slice(); answers = pw.answers.slice(); pw = null;
+  order = pw.sorted.flat(); ties = pw.sorted.flatMap(g => g.slice(1).map((id, k) => [g[k], id])); answers = pw.answers.slice(); pw = null;
   $("ask-live").hidden = true; $("ask-idle").hidden = false;
   $("ask-done").textContent = "Done. " + answers.length + " answers set the order below. Check it, adjust by dragging if needed, then copy it.";
   $("ask-start").textContent = "Start the questions again"; render();
