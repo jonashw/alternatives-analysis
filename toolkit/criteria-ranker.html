@@ -71,12 +71,27 @@ summary{cursor:pointer;font-weight:500}
 .ask .q{font-family:var(--display);font-size:1.05rem}
 .tie{font-size:.78rem;color:var(--muted);margin-left:6px}
 [hidden]{display:none!important}
+.part{border-top:1px solid var(--line);padding-top:12px;display:flex;flex-direction:column;gap:10px}
+.part:first-of-type{border-top:0;padding-top:0}
+.part h3{font-family:var(--display);font-size:1rem;margin:0}
+.opts td,.opts th{vertical-align:middle}
+.opts tr.win td:first-child{font-weight:600}
+.opts tr.veto td{color:var(--muted)}
+.opts .bar{height:8px;border-radius:4px;background:var(--accent-soft);overflow:hidden;min-width:60px}
+.opts .bar i{display:block;height:100%;background:var(--accent)}
+.opts tr.win .bar i{background:var(--win)}
+select{font:inherit;color:var(--fg);background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:3px 4px}
+.pass{color:var(--accent);font-weight:600}
+.fail{color:var(--win);font-weight:600}
+.multi .cols{grid-template-columns:minmax(0,1fr)}
+@media (min-width:860px){.multi .cols{grid-template-columns:minmax(0,.8fr) minmax(0,1.35fr)}}
+.door{font-size:.85rem;color:var(--muted);font-style:italic}
 </style>
 
 <div class="wrap">
   <header>
-    <h1>Rank what matters for the team chat tool</h1>
-    <p class="lede">Put the criteria in order, most important at the top. Either answer a short run of "which matters more?" questions, or drag the list yourself. The weights and the winning option update as you go. When it looks right, copy the result and paste it into the thread.</p>
+    <h1 id="title"></h1>
+    <p class="lede" id="lede"></p>
   </header>
 
   <section class="panel" aria-labelledby="h-ask">
@@ -96,7 +111,7 @@ summary{cursor:pointer;font-weight:500}
   <div class="cols">
     <section class="panel" aria-labelledby="h-rank">
       <h2 id="h-rank">Your ranking</h2>
-      <p class="small">Drag by the handle, or use the arrows. Purple notes mark the spots the analyst was unsure about.</p>
+      <p class="small" id="rank-help">Drag by the handle, or use the arrows. Purple notes mark the spots the analyst was unsure about.</p>
       <ol class="rank" id="rank"></ol>
       <fieldset>
         <legend>How steeply should the weights fall from top to bottom?</legend>
@@ -109,11 +124,21 @@ summary{cursor:pointer;font-weight:500}
     </section>
 
     <div style="display:flex;flex-direction:column;gap:20px;min-width:0">
+      <section class="panel" aria-labelledby="h-gates" id="gates-panel" hidden>
+        <h2 id="h-gates">Gates every part must pass</h2>
+        <p class="small">Set once here and binding on every part. An option that fails any gate is vetoed: it stays visible but is not scored.</p>
+        <ul id="gates" style="margin:0;padding-left:1.2em"></ul>
+      </section>
+
       <section class="panel" aria-labelledby="h-res">
         <h2 id="h-res">Result with this ranking</h2>
-        <div class="verdict" id="verdict"></div>
-        <div id="alts" style="display:flex;flex-direction:column;gap:12px"></div>
-        <p class="small" id="robust"></p>
+        <div id="results" style="display:flex;flex-direction:column;gap:16px"></div>
+      </section>
+
+      <section class="panel" aria-labelledby="h-roll" id="roll-panel" hidden>
+        <h2 id="h-roll">Roll-up into the whole piece</h2>
+        <div class="tablebox"><table id="roll"></table></div>
+        <p class="small">Next, in the parent: check that the winners work together, reopen the part with the smaller margin if two clash, then run one But / Therefore pass over the assembled piece.</p>
       </section>
 
       <section class="panel" aria-labelledby="h-copy">
@@ -127,18 +152,24 @@ summary{cursor:pointer;font-weight:500}
   <section class="panel">
     <details>
       <summary>Scores behind the result (1 poor to 5 excellent)</summary>
-      <div class="tablebox" style="margin-top:10px"><table id="scores"></table></div>
-      <p class="small" style="margin-top:8px">Scores stay fixed here. Only the weights change with your ranking. Notes on each criterion say which scores are measured and which are estimates.</p>
+      <div id="scores" style="margin-top:10px;display:flex;flex-direction:column;gap:12px"></div>
+      <p class="small" style="margin-top:8px">Scores stay fixed here, except the director's scores, which you set on the page. Only the weights change with your ranking. Notes on each criterion say which scores are measured and which are estimates.</p>
     </details>
   </section>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js"></script>
 <script>
-// Everything specific to this decision lives in DATA, so the page can be reused for another analysis.
+// Everything specific to a decision lives in DATA, so the page can be reused for another analysis.
+// Two shapes are accepted:
+//  - One decision: alternatives, and criteria that each carry scores (one per alternative).
+//  - A parent with parts: criteria without scores (the parent's shared ranking), optional shared gates,
+//    and parts, each with its own alternatives, scores by criterion id, and gate results.
+//    A criterion marked director:true is scored on the page by the director (for example, delight).
 const DATA = {
   // Example decision. Replace this whole block for a real analysis.
   key: "example-chat-tool",
+  title: "Rank what matters for the team chat tool",
   alternatives: ["A Hosted chat service", "B Self-hosted open source", "C Email lists only"],
   criteria: [
     {id:"COST", name:"Stays inside the budget", scores:[3,4,5]},
@@ -149,14 +180,60 @@ const DATA = {
   ],
   draftWeights: {COST:20,LEAVE:20,EASE:25,UPKEEP:20,SEARCH:15}
 };
-const byId = Object.fromEntries(DATA.criteria.map(c => [c.id, c]));
-const startOrder = DATA.criteria.map(c => c.id);
+
+// A second example, a parent with parts. Open the page with ?example=parts to see it.
+const PARTS_EXAMPLE = {
+  key: "example-story-parts",
+  title: "Rank what matters for the short science story",
+  criteria: [
+    {id:"LORE", name:"Fits what is already established"},
+    {id:"THEME", name:"Puts the theme in play early"},
+    {id:"DELIGHT", name:"Delight: a genuine \"oh!\" moment", director:true, note:"The director scores this one on the page."},
+    {id:"CLEAR", name:"Clear to someone who hasn't seen the rest"},
+    {id:"POC", name:"Quick to see working"}
+  ],
+  draftWeights: {LORE:20,THEME:20,DELIGHT:25,CLEAR:20,POC:15},
+  gates: [
+    {id:"SAFE", name:"Audience safety"},
+    {id:"FACTS", name:"True to the facts, counting listed corrections"},
+    {id:"UNATTENDED", name:"Works unattended (the big screen has nobody to tap)"}
+  ],
+  parts: [
+    {id:"CUTS", name:"How the cuts relate", alternatives:["One cut for every setting", "A shared core with a big-screen cut"],
+      scores:{LORE:[4,4], CLEAR:[3,4], POC:[5,3]}, gates:{SAFE:[1,1], FACTS:[1,1], UNATTENDED:[0,1]}},
+    {id:"SPINE", name:"The spine", alternatives:["The shrinking trip", "The guided tour", "The wrong guess"],
+      scores:{THEME:[5,3,4], CLEAR:[4,5,3], POC:[3,4,4]}, gates:{SAFE:[1,1,1], FACTS:[1,1,1], UNATTENDED:[1,1,1]}},
+    {id:"AFTER", name:"After the story", alternatives:["Replay", "Explore each screen", "A matching game"],
+      scores:{THEME:[2,4,4], POC:[5,3,2]}, gates:{SAFE:[1,1,1], FACTS:[1,1,0], UNATTENDED:[1,1,1]},
+      ownGates:[{id:"SHORT", name:"Ends within a minute"}], ownGateResults:{SHORT:[1,1,1]}},
+    {id:"LOOK", name:"Visual style and level of realism", twoWay:true, note:"Two-way door: prototype two styles and look at them on the target screen."}
+  ]
+};
+const D = new URLSearchParams(location.search).get("example") === "parts" ? PARTS_EXAMPLE : DATA;
+
+// Normalize both shapes into parts. A single decision is one unnamed part.
+const PARTS = D.parts ? D.parts : [{ id: "", name: "", alternatives: D.alternatives,
+  scores: Object.fromEntries(D.criteria.filter(c => c.scores).map(c => [c.id, c.scores])), gates: {} }];
+const MULTI = !!D.parts;
+const GATES = D.gates || [];
+if (MULTI) document.body.classList.add("multi");
+document.title = MULTI ? "Criteria Ranker, parent and parts" : "Criteria Ranker";
+document.getElementById("title").textContent = D.title || "Rank what matters";
+document.getElementById("lede").textContent = MULTI
+  ? "One ranking sets the weights for every part of this decision. Put the criteria in order, most important at the top, by answering a short run of \"which matters more?\" questions or by dragging. Score the director's column for each part, then copy the result and paste it into the thread."
+  : "Put the criteria in order, most important at the top. Either answer a short run of \"which matters more?\" questions, or drag the list yourself. The weights and the winning option update as you go. When it looks right, copy the result and paste it into the thread.";
+
+const byId = Object.fromEntries(D.criteria.map(c => [c.id, c]));
+const startOrder = D.criteria.map(c => c.id);
 let order = startOrder.slice();
-const KEY = "rank-order-" + (DATA.key || "default");
+const KEY = "rank-order-" + (D.key || "default");
+const DKEY = "director-scores-" + (D.key || "default");
 let ties = [];      // pairs [a, b] the owner called "about the same"; ties chain, so A = B and B = C put all three in one group
 let answers = [];   // the pairwise answers, kept as the record
+let director = {};  // director's scores, by part id, criterion id and alternative index
 try { const s = JSON.parse(localStorage.getItem(KEY) || "null");
   if (Array.isArray(s) && s.length === startOrder.length && s.every(x => byId[x])) order = s; } catch (e) {}
+try { director = JSON.parse(localStorage.getItem(DKEY) || "{}") || {}; } catch (e) { director = {}; }
 function tieRoot(id) { const parent = {}; const find = x => parent[x] === undefined || parent[x] === x ? x : (parent[x] = find(parent[x]));
   ties.forEach(([a, b]) => { const ra = find(a), rb = find(b); if (ra !== rb) parent[ra] = rb; }); return find(id); }
 function tied(a, b) { return tieRoot(a) === tieRoot(b); }
@@ -169,12 +246,50 @@ function weights(n, curve) {
   }
   return w;
 }
-function totals(wById) {
-  return DATA.alternatives.map((_, j) => DATA.criteria.reduce((s, c) => s + wById[c.id] * c.scores[j], 0));
-}
 function curve() { return document.getElementById("curve-sum").checked ? "sum" : "roc"; }
 
+// The criteria a part is scored on: those it has scores for, plus every director criterion.
+function partCriteria(p) { return D.criteria.filter(c => c.director || (p.scores && p.scores[c.id])).map(c => c.id); }
+function score(p, id, j) {
+  if (byId[id].director) { const v = ((director[p.id] || {})[id] || [])[j]; return v ? Number(v) : null; }
+  return p.scores[id][j];
+}
+function partGates(p) { return GATES.map(g => ({ g, r: (p.gates || {})[g.id] })).concat((p.ownGates || []).map(g => ({ g, r: (p.ownGateResults || {})[g.id], own: true }))); }
+function failedGates(p, j) { return partGates(p).filter(x => x.r && x.r[j] === 0).map(x => x.g.name); }
+// Weighted total over the criteria this part uses that are scored; weights renormalized over those.
+function totals(p, wById) {
+  const ids = partCriteria(p);
+  return p.alternatives.map((_, j) => {
+    let s = 0, w = 0; ids.forEach(id => { const v = score(p, id, j); if (v !== null) { s += wById[id] * v; w += wById[id]; } });
+    return w ? s / w : 0;
+  });
+}
+function missingDirector(p) {
+  return partCriteria(p).filter(id => byId[id].director && p.alternatives.some((_, j) => score(p, id, j) === null));
+}
+
+function analyse(p, wById) {
+  const v = totals(p, wById);
+  const alive = p.alternatives.map((_, j) => j).filter(j => !failedGates(p, j).length);
+  const rankIdx = alive.slice().sort((a, b) => v[b] - v[a]);
+  const top = rankIdx[0], second = rankIdx[1];
+  const margin = second === undefined ? null : v[top] - v[second];
+  // Robustness: jiggle every weight by up to 20% either way, 2,000 times, with a fixed seed.
+  let seed = 20261118; const rnd = () => (seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296;
+  const wins = p.alternatives.map(() => 0), N = 2000;
+  if (alive.length > 1) for (let t = 0; t < N; t++) {
+    const q = {}; let s = 0;
+    order.forEach(id => { q[id] = wById[id] * (0.8 + 0.4 * rnd()); s += q[id]; });
+    order.forEach(id => q[id] /= s);
+    const tv = totals(p, q); let b = alive[0]; alive.forEach(j => { if (tv[j] > tv[b]) b = j; }); wins[b]++;
+  }
+  const dw = Object.fromEntries(Object.entries(D.draftWeights || {}).map(([k, x]) => [k, x / 100]));
+  const dv = totals(p, dw); let draftTop = alive[0]; alive.forEach(j => { if (dv[j] > dv[draftTop]) draftTop = j; });
+  return { v, alive, rankIdx, top, second, margin, wins, N, draftTop };
+}
+
 const list = document.getElementById("rank");
+const esc = s => String(s).replace(/[&<>"]/g, ch => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[ch]));
 function render() {
   const w = weights(order.length, curve());
   // Neighbours called "about the same" share the average of their positions' weights.
@@ -191,53 +306,92 @@ function render() {
     const li = document.createElement("li"); li.className = "item"; li.dataset.id = id;
     li.innerHTML =
       '<span class="grip" aria-hidden="true">⠿</span>' +
-      '<div style="min-width:0"><div class="name"><span class="pos">' + (i + 1) + '</span> ' + c.name + ' <span class="small">(' + c.id + ')</span>' + (i > 0 && tied(order[i - 1], id) ? '<span class="tie">about the same as the one above</span>' : '') + '</div>' +
-      (c.note ? '<div class="note">' + c.note + '</div>' : '') +
+      '<div style="min-width:0"><div class="name"><span class="pos">' + (i + 1) + '</span> ' + esc(c.name) + ' <span class="small">(' + c.id + ')</span>' + (i > 0 && tied(order[i - 1], id) ? '<span class="tie">about the same as the one above</span>' : '') + '</div>' +
+      (c.note ? '<div class="note">' + esc(c.note) + '</div>' : '') +
       '<div class="meter"><i style="width:' + (100 * w[i] / max).toFixed(1) + '%"></i></div></div>' +
       '<div class="side"><span class="pct">' + (100 * w[i]).toFixed(1) + '%</span>' +
-      '<button type="button" data-move="-1" aria-label="Move ' + c.name + ' up"' + (i === 0 ? ' disabled' : '') + '>▲</button>' +
-      '<button type="button" data-move="1" aria-label="Move ' + c.name + ' down"' + (i === order.length - 1 ? ' disabled' : '') + '>▼</button></div>';
+      '<button type="button" data-move="-1" aria-label="Move ' + esc(c.name) + ' up"' + (i === 0 ? ' disabled' : '') + '>▲</button>' +
+      '<button type="button" data-move="1" aria-label="Move ' + esc(c.name) + ' down"' + (i === order.length - 1 ? ' disabled' : '') + '>▼</button></div>';
     list.appendChild(li);
   });
 
-  const v = totals(wById);
-  const rankIdx = v.map((_, j) => j).sort((a, b) => v[b] - v[a]);
-  const top = rankIdx[0], second = rankIdx[1], margin = v[top] - v[second];
-  document.getElementById("verdict").innerHTML =
-    '<strong>' + DATA.alternatives[top] + '</strong> wins with ' + v[top].toFixed(2) + ' of 5, ahead of ' +
-    DATA.alternatives[second] + ' by ' + margin.toFixed(2) + (margin / 4 < 0.05 ? '. That is a close call.' : '.');
-  const alts = document.getElementById("alts"); alts.innerHTML = "";
-  rankIdx.forEach(j => {
-    const d = document.createElement("div"); d.className = "alt" + (j === top ? " win" : "");
-    d.innerHTML = '<span class="aname">' + DATA.alternatives[j] + '</span><span class="score">' + v[j].toFixed(2) + '</span>' +
-      '<div class="bar"><i style="width:' + (100 * v[j] / 5).toFixed(1) + '%"></i></div>';
-    alts.appendChild(d);
+  // Shared gates, shown once.
+  document.getElementById("gates-panel").hidden = !GATES.length;
+  document.getElementById("gates").innerHTML = GATES.map(g => "<li>" + esc(g.name) + "</li>").join("");
+
+  const results = document.getElementById("results"); results.innerHTML = "";
+  const roll = [], textParts = [];
+  PARTS.forEach(p => {
+    const box = document.createElement("div"); box.className = "part";
+    if (p.twoWay) {
+      box.innerHTML = (MULTI ? "<h3>" + esc(p.name) + "</h3>" : "") + '<p class="door">' + esc(p.note || "Two-way door: prototype it.") + "</p>";
+      results.appendChild(box);
+      roll.push([p.name, "Two-way door: prototype it", "", "", ""]);
+      textParts.push(p.name + ": two-way door, prototype it");
+      return;
+    }
+    const a = analyse(p, wById), dirIds = partCriteria(p).filter(id => byId[id].director), miss = missingDirector(p);
+    const close = a.margin !== null && a.margin / 4 < 0.05;
+    let verdict;
+    if (!a.alive.length) verdict = "Every option fails a gate. Add or rework an option.";
+    else if (a.second === undefined) verdict = "<strong>" + esc(p.alternatives[a.top]) + "</strong> is the only option that passes the gates.";
+    else verdict = "<strong>" + esc(p.alternatives[a.top]) + "</strong> wins with " + a.v[a.top].toFixed(2) + " of 5, ahead of " +
+      esc(p.alternatives[a.second]) + " by " + a.margin.toFixed(2) + (close ? ". That is a close call, so it is the director's call." : ".");
+    if (miss.length) verdict += " Waiting on the director's score for " + miss.map(id => byId[id].name.split(":")[0]).join(", ") + "; the totals leave it out until then.";
+    const gateCols = partGates(p);
+    let t = '<table class="opts"><tr><th>Option</th>' +
+      (gateCols.length ? '<th>Gates</th>' : '') +
+      dirIds.map(id => '<th>' + esc(byId[id].name.split(":")[0]) + ' <span class="small">(director)</span></th>').join("") +
+      '<th class="n">Score</th><th style="width:30%"></th></tr>';
+    const rows = a.alive.length ? a.rankIdx.concat(p.alternatives.map((_, j) => j).filter(j => !a.alive.includes(j))) : p.alternatives.map((_, j) => j);
+    rows.forEach(j => {
+      const failed = failedGates(p, j), veto = failed.length > 0;
+      t += '<tr class="' + (j === a.top && a.alive.length ? "win" : "") + (veto ? " veto" : "") + '"><td>' + esc(p.alternatives[j]) + '</td>' +
+        (gateCols.length ? '<td>' + (veto ? '<span class="fail">Vetoed:</span> ' + esc(failed.join(", ")) : '<span class="pass">Pass</span>') + '</td>' : '') +
+        dirIds.map(id => '<td><select data-part="' + esc(p.id) + '" data-crit="' + id + '" data-alt="' + j + '" aria-label="' + esc(byId[id].name) + ' for ' + esc(p.alternatives[j]) + '">' +
+          '<option value="">–</option>' + [1, 2, 3, 4, 5].map(n => '<option' + (score(p, id, j) === n ? " selected" : "") + '>' + n + '</option>').join("") + '</select></td>').join("") +
+        '<td class="n">' + (veto ? "–" : a.v[j].toFixed(2)) + '</td>' +
+        '<td>' + (veto ? "" : '<div class="bar"><i style="width:' + (100 * a.v[j] / 5).toFixed(1) + '%"></i></div>') + '</td></tr>';
+    });
+    t += "</table>";
+    const robust = a.alive.length > 1 ? "When every weight is varied by 20% either way, " + p.alternatives[a.top] + " still wins " +
+      Math.round(100 * a.wins[a.top] / a.N) + "% of 2,000 trials. " +
+      (a.draftTop === a.top ? "The analyst's draft weights picked the same winner." : "The analyst's draft weights picked " + p.alternatives[a.draftTop] + " instead.") : "";
+    box.innerHTML = (MULTI ? "<h3>" + esc(p.name) + "</h3>" : "") + '<div class="verdict">' + verdict + '</div><div class="tablebox">' + t + '</div>' +
+      (robust ? '<p class="small">' + esc(robust) + '</p>' : '');
+    results.appendChild(box);
+    const status = !a.alive.length ? "All vetoed" : miss.length ? "Waiting on the director" : close ? "Tie: the director's call" : "Chosen";
+    roll.push([p.name, a.alive.length ? p.alternatives[a.top] : "None", a.alive.length ? a.v[a.top].toFixed(2) : "",
+      a.margin === null ? "" : a.margin.toFixed(2) + (close ? " (close)" : " (clear)"), status]);
+    const dirText = dirIds.map(id => byId[id].id + " " + p.alternatives.map((alt, j) => alt + " " + (score(p, id, j) ?? "unscored")).join(", ")).join("; ");
+    textParts.push((MULTI ? p.name + ": " : "Winner: ") + (a.alive.length ? p.alternatives[a.top] + " " + a.v[a.top].toFixed(2) : "none") +
+      (a.second !== undefined ? ", then " + p.alternatives[a.second] + " " + a.v[a.second].toFixed(2) : "") +
+      (failedGatesText(p) ? ". Vetoed: " + failedGatesText(p) : "") + (dirText ? ". Director: " + dirText : ""));
   });
 
-  // Robustness: jiggle every weight by up to 20% either way, 2,000 times, with a fixed seed.
-  let seed = 20261118; const rnd = () => (seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296;
-  const wins = DATA.alternatives.map(() => 0), N = 2000;
-  for (let t = 0; t < N; t++) {
-    const p = {}; let s = 0;
-    order.forEach(id => { p[id] = wById[id] * (0.8 + 0.4 * rnd()); s += p[id]; });
-    order.forEach(id => p[id] /= s);
-    const tv = totals(p); wins[tv.indexOf(Math.max(...tv))]++;
-  }
-  const dv = totals(Object.fromEntries(Object.entries(DATA.draftWeights).map(([k, x]) => [k, x / 100])));
-  const draftTop = dv.indexOf(Math.max(...dv));
-  document.getElementById("robust").textContent =
-    'When every weight is varied by 20% either way, ' + DATA.alternatives[top] + ' still wins ' +
-    Math.round(100 * wins[top] / N) + '% of 2,000 trials. ' +
-    (draftTop === top ? "The analyst's draft weights picked the same winner." : "The analyst's draft weights picked " + DATA.alternatives[draftTop] + " instead.");
+  document.getElementById("roll-panel").hidden = !MULTI;
+  document.getElementById("roll").innerHTML = '<tr><th>Part</th><th>Winner</th><th class="n">Score</th><th class="n">Margin</th><th>Status</th></tr>' +
+    roll.map(r => '<tr><td>' + esc(r[0]) + '</td><td>' + esc(r[1]) + '</td><td class="n">' + r[2] + '</td><td class="n">' + r[3] + '</td><td>' + esc(r[4]) + '</td></tr>').join("");
 
   document.getElementById("out").value =
     "My ranking (" + (curve() === "roc" ? "steep" : "gentle") + " weights):\n" +
     order.map((id, i) => (i + 1) + ". " + id + " " + byId[id].name + " (" + (100 * w[i]).toFixed(1) + "%)" + (i > 0 && tied(order[i - 1], id) ? " [about the same as the one above]" : "")).join("\n") +
-    "\nWinner: " + DATA.alternatives[top] + " " + v[top].toFixed(2) + ", then " + DATA.alternatives[second] + " " + v[second].toFixed(2) +
+    "\n" + (MULTI ? "Parts:\n" : "") + textParts.join("\n") +
     (answers.length ? "\nSet by " + answers.length + " pairwise answers: " + answers.map(a => a.ans === "same" ? a.a + " = " + a.b : (a.ans === "a" ? a.a + " > " + a.b : a.b + " > " + a.a)).join(", ") : "");
   try { localStorage.setItem(KEY, JSON.stringify(order)); } catch (e) {}
 }
+function failedGatesText(p) {
+  return p.alternatives.map((alt, j) => [alt, failedGates(p, j)]).filter(x => x[1].length).map(x => x[0] + " (" + x[1].join(", ") + ")").join(", ");
+}
 
+document.getElementById("results").addEventListener("change", e => {
+  const s = e.target.closest("select[data-crit]"); if (!s) return;
+  const p = s.dataset.part, c = s.dataset.crit, j = Number(s.dataset.alt);
+  director[p] = director[p] || {}; director[p][c] = director[p][c] || []; director[p][c][j] = s.value ? Number(s.value) : null;
+  try { localStorage.setItem(DKEY, JSON.stringify(director)); } catch (err) {}
+  render();
+  const again = document.querySelector('select[data-part="' + p + '"][data-crit="' + c + '"][data-alt="' + j + '"]'); if (again) again.focus();
+});
 list.addEventListener("click", e => {
   const b = e.target.closest("button[data-move]"); if (!b) return;
   const id = b.closest(".item").dataset.id, i = order.indexOf(id), j = i + Number(b.dataset.move);
@@ -315,7 +469,15 @@ document.getElementById("copy").addEventListener("click", () => {
 });
 
 const st = document.getElementById("scores");
-st.innerHTML = "<tr><th>Criterion</th>" + DATA.alternatives.map(a => '<th class="n">' + a.split(" ")[0] + "</th>").join("") + "</tr>" +
-  DATA.criteria.map(c => "<tr><td>" + c.id + " " + c.name + "</td>" + c.scores.map(s => '<td class="n">' + s + "</td>").join("") + "</tr>").join("");
+st.innerHTML = PARTS.filter(p => !p.twoWay).map(p => {
+  const ids = partCriteria(p);
+  return (MULTI ? "<strong>" + esc(p.name) + "</strong>" : "") + '<div class="tablebox"><table><tr><th>Criterion</th>' +
+    p.alternatives.map(a => '<th class="n">' + esc(MULTI ? a : a.split(" ")[0]) + "</th>").join("") + "</tr>" +
+    ids.map(id => "<tr><td>" + id + " " + esc(byId[id].name) + "</td>" + p.alternatives.map((_, j) =>
+      '<td class="n">' + (byId[id].director ? "director" : p.scores[id][j]) + "</td>").join("") + "</tr>").join("") +
+    partGates(p).map(x => "<tr><td>Gate: " + esc(x.g.name) + (x.own ? " (this part only)" : "") + "</td>" + p.alternatives.map((_, j) =>
+      '<td class="n">' + (x.r ? (x.r[j] ? "pass" : "fail") : "") + "</td>").join("") + "</tr>").join("") +
+    "</table></div>";
+}).join("");
 render();
 </script>

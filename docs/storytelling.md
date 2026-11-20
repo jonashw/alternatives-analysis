@@ -6,7 +6,7 @@
 >
 > **Scope:** This specification is contextualized to **storytelling and storycrafting**: stories, scripts, cutscenes, characters and lore, and any authored sequence an audience lives through (including interactive and live sequences). A [general-purpose variant](https://alternatives.jonashw.dev/general.md) and a [software variant](https://alternatives.jonashw.dev/software.md) are maintained separately.
 >
-> **Status:** Version 1, adopted for use 2026-11-12. Proven on one story so far. To be tested and refined across many.
+> **Status:** Version 2, 2026-11-20. Version 1 was adopted for use 2026-11-12. Version 2 adds settings of use, decisions made of parts, earlier and per-screen But / Therefore passes, two voices, departures from reality, and a standard look-and-realism part. Proven on one story so far. To be tested and refined across many.
 
 ## The Trio
 
@@ -23,10 +23,13 @@ This variant is one of three principles that work together. Each one covers what
 Each story AA document must include:
 
 1. A clearly defined story question and its background: what is fixed canon, what is open, and whose source material it touches.
-2. Detailed exploration of at least two viable options, including at least one deliberately **wild option** (see Option Rules), with comparative analysis.
-3. Explicit identification of trade-offs, including fidelity to the source, tone, audience safety, effort to see it working, and reversibility once other scenes build on it.
-4. A final decision with clear justification, and the chosen beats run through a **But / Therefore pass**.
-5. A log of every **vetoed** option and the gate that stopped it.
+2. The **settings of use**: where the story will be watched, and by whom (see Settings of Use).
+3. Detailed exploration of at least two viable options, including at least one deliberately **wild option** (see Option Rules), with comparative analysis.
+4. Explicit identification of trade-offs, including fidelity to the source, tone, audience safety, effort to see it working, and reversibility once other scenes build on it.
+5. A **But / Therefore pass** on the first draft, and again on the chosen beats at the close (see But / Therefore).
+6. A list of **departures from reality**, when the story shows real things (see Departures from Reality).
+7. A final decision with clear justification.
+8. A log of every **vetoed** option and the gate that stopped it.
 
 ---
 
@@ -48,7 +51,7 @@ Apply these tests to a proposed story decision. If **any** test is true, an AA i
 
 ### Short-Circuit Rules
 
-- **Two-way door, low leverage:** no AA. Prototype it, look at it, keep or revert. Record a one-line rationale.
+- **Two-way door, low leverage:** no AA. Prototype it, look at it, keep or revert. Record a one-line rationale. **Say this exit out loud**, even inside a larger AA: when a part of the decision is a two-way door, write "two-way door: prototype it" against that part and move on, rather than scoring it. It is the fastest path the spec offers, and it is easy to forget once a matrix is open.
 - **Existing AA or canon already covers it:** reference the prior document instead of duplicating.
 - **Line-level choices** (a single joke, a word, a caption): no AA. Use the lighter tools below.
 
@@ -69,6 +72,55 @@ Apply these tests to a proposed story decision. If **any** test is true, an AA i
 | **Morphological box** (Fritz Zwicky) | Exploring every combination of a few dimensions, such as agency × empowerment for two characters. |
 | **Playtest / table read** | Hearing how a real audience (a test reader, a small audience) reacts. |
 
+## Decisions Made of Parts
+
+A script is usually one overall decision made of smaller ones: how the cuts relate to each other, the spine, a cut for a particular setting, what the viewer can do after the story ends. Record it as **one parent AA with a mini AA per part**.
+
+### The parent AA
+
+The parent owns everything the parts share:
+
+- the story question for the whole piece, and its background,
+- the **settings of use**,
+- the **gates**,
+- the **criteria ranking** (the director's weights), which every part uses unless it has its own (see below),
+- the list of parts, and the **roll-up** of their winners.
+
+### The parts
+
+Each part is a mini AA (three to four criteria, no Monte Carlo unless the margin is close) with its own question, options, scores and winner. A part that is a two-way door is not scored at all: write "two-way door: prototype it" against it in the parent's list. Standard parts to consider:
+
+| Part | Question it answers |
+|---|---|
+| **How the cuts relate** | One cut for every setting, or separate cuts that share material? |
+| **The spine** | Which beats, in which order, carry the story? |
+| **A cut per setting** | What changes for a setting with its own needs, such as big screen with no hands? |
+| **After the story** | What can the viewer do once it ends: replay, explore, play? |
+| **Visual style and level of realism** | See Standard Part: Visual Style and Level of Realism. |
+
+### How gates pass down
+
+1. Every gate and setting of use in the parent binds **every** part. A part never drops or loosens an inherited gate.
+2. A part may **add** a gate of its own. It applies to that part only, and is listed in the parent's gate table with the part named.
+3. A part may rank its own criteria when its priorities really differ from the parent's. Record that it did, and why.
+
+### How part winners roll up
+
+The parent's record holds one row per part:
+
+| Part | Winner | Margin | Hinge | Status |
+|---|---|---|---|---|
+| *The spine* | *The plain option name* | *Close or clear* | *What the choice depends on* | *Chosen, tie for the director, or two-way door* |
+
+Then, in the parent:
+
+1. **Fit check.** Do the part winners work together? Name any pair that clashes (for example, a spine that needs a tap and a cut for a setting with nobody to tap).
+2. **On a clash,** reopen the part with the smaller margin, under the other part's winner as a new constraint, and score it again.
+3. **Whole-piece But / Therefore pass** on the assembled script (per entry point and per screen when it is non-linear).
+4. The parent has a decision matrix of its own **only** when there are whole-piece alternatives to compare (for example, two complete assemblies). Otherwise its decision is the roll-up table.
+
+The [Criteria Ranker](https://alternatives.jonashw.dev/toolkit/criteria-ranker.html?example=parts) can hold a parent and its parts on one page: one ranking, the shared gates shown once, a column for the director's delight score, and the roll-up table.
+
 ---
 
 ## AA Template Structure
@@ -82,10 +134,26 @@ Apply these tests to a proposed story decision. If **any** test is true, an AA i
 | **Status** | `DRAFT` · `READY FOR REVIEW` · `FINAL` |
 | **Source author** | Whose material this touches (their words are never changed without their say) |
 | **Scorer bias** | Who proposed which options, and any leaning declared *before* scoring |
+| **Parent / parts** | For a part: its parent AA. For a parent: the list of its parts (see Decisions Made of Parts) |
 
 ### Background
 
 What is fixed canon, what is open, and why the question matters (the leverage and the door type).
+
+### Settings of Use
+
+List every setting where the story will be watched, and who is watching. The same script can succeed in one setting and fail in another, so options are judged against these settings, not against an ideal viewer.
+
+| Setting | Who is there | Can anyone interact? | Notes |
+|---|---|---|---|
+| *Adult alone* | *One adult* | *Yes* | *e.g. on a phone, sound may be off* |
+| *Kid with a grown-up* | *Child and adult together* | *Yes, the adult may read or tap* | |
+| *Kid alone* | *One child* | *Yes, the child only* | *Reading level, safety* |
+| *Big screen, no hands* | *A room, possibly a crowd* | *No: it runs unattended* | *Seen from a distance, may loop* |
+
+Standard settings to consider: **adult alone**, **kid with a grown-up**, **kid alone**, and **big screen with no hands** (a wall, a TV or a projector running on its own). Add others as needed (a live reading, a classroom).
+
+Each setting can bring its own gates. The standard one is **Works unattended**: when any setting has nobody to tap, every beat must play, advance and read without input. A beat that waits for a tap fails this gate.
 
 ### Decision
 
@@ -130,6 +198,7 @@ Suggested gates (adapt per story):
 1. **Source words.** Doesn't change the source author's words. Adding is welcome ("yes, and").
 2. **Audience safety.** Nothing cruel, harmful or misleading on the surface for the intended audience. Darker readings are fine underneath, for older viewers.
 3. **Ownership.** No copying of others' owned characters. Homage and credited influence are welcome.
+4. **Works unattended.** Required when any setting of use has nobody to interact (see Settings of Use). Every beat plays, advances and reads with no input.
 
 **Zero-veto mode (alternative).** Instead of screening options out, a gate can sit in the matrix as a row with no weight, scored **0** (fails) or **1** (passes). Any 0 sets that option's total to 0:
 
@@ -237,9 +306,57 @@ The criterion with the smallest feasible $|\delta_k|$ is the **most critical cri
 
 7. **Name the hinge.** State in one sentence what the choice actually depends on (a weight, a score, or neither), and put that question to the director.
 
-### Closing Pass: But / Therefore
+### But / Therefore
 
-After choosing, write the chosen beats as a chain with the joining word between each one: *therefore*, *but* or *and then*. Remove each beat in turn. If nothing after it breaks, the beat is loose: fix it, or keep it on purpose with a reason. Idle loops in interactive pieces, slice-of-life moments and kishōtenketsu turns are legitimate reasons.
+Write the beats as a chain with the joining word between each one: *therefore*, *but* or *and then*. Remove each beat in turn. If nothing after it breaks, the beat is loose: fix it, or keep it on purpose with a reason. Idle loops in interactive pieces, slice-of-life moments and kishōtenketsu turns are legitimate reasons.
+
+Run the pass **twice**:
+
+1. **First draft.** Run it on the very first draft, before any option is scored or built. A missing "therefore" is cheapest to find before anything is drawn, and it often shows that an option needs a beat nobody has written yet.
+2. **Close.** Run it again on the chosen beats once the decision is made.
+
+#### Non-linear stories
+
+A hub with a screen per subject, a game mode or several ways in has no single chain. Write one chain **per entry point** (each way a viewer can arrive, through to where they leave) and one chain **per screen** (the beats inside that screen). Every screen needs its own "therefore": the reason the viewer is there and what follows from it. One chain for the whole piece hides the screens that have none.
+
+### Departures from Reality
+
+When a story shows real things (animals, places, science, history), list every place it departs from reality on purpose. Departures are welcome; hidden ones are not.
+
+| Departure | Why it is there | How the viewer is told |
+|---|---|---|
+| *A joke zoom far past real scale* | *The surprise of the reveal* | *A plain caption gives the true scale seconds later* |
+| *False colour* | *To tell two things apart* | *A "colours added" label* |
+| *A "super powers" mode* | *Play* | *The mode's name and a switch back to "real"* |
+
+A departure with no "how the viewer is told" either gets one or is a mistake.
+
+### Two Voices
+
+A common and useful pattern: a **shout voice** overstates for the laugh or the surprise, and a **plain voice** corrects it seconds later with the true version. The overstatement is the joke; the correction is what the viewer keeps.
+
+Every shout claim that is not literally true is listed with its correction:
+
+| Shout claim | Correction | Where the correction appears |
+|---|---|---|
+| *An overstated claim, shouted* | *The true statement* | *The same screen, a few seconds later, in the plain voice* |
+
+A fact gate judges the pair, not the shout line alone: a listed shout claim with its correction shown in the same setting passes. A shout claim with no listed correction fails. In settings where the viewer may leave before the correction (a looping wall, a skippable screen), the correction must appear before they can leave.
+
+### Standard Part: Visual Style and Level of Realism
+
+Any story with pictures carries a decision about how it looks and how real it looks (flat cartoon, stylized, painted, photoreal, diagrammatic). Treat it as a standard decision part. Its default is to **ask the director**: the analyst lays out the options and does not pick one.
+
+Score its options **in the real view**, not on a close-up mock-up:
+
+| Real-view check | Ask |
+|---|---|
+| **Distance** | How far is the viewer from the screen in each setting of use? Does the style still read from there? |
+| **Scale** | How big does it appear on the target screen, and how small are the smallest details? |
+| **Motion** | Does the style hold up moving at real speed, not only as a still? |
+| **Target device** | Does it look right, and run smoothly, on the actual phone, tablet, TV or projector? |
+
+The quickest way to score these is usually to prototype two or three styles and look at them on the target device, from the real distance.
 
 ### Diagrams
 
