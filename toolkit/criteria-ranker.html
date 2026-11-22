@@ -41,7 +41,9 @@ ol.rank{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;ga
 .side{display:flex;align-items:center;gap:6px}
 .pct{font-variant-numeric:tabular-nums;font-weight:600;min-width:3.2em;text-align:right}
 button{font:inherit;color:var(--fg);background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:6px 9px;cursor:pointer}
-button:hover{border-color:var(--accent)}
+/* Hover only where a real pointer can hover; on touch screens :hover sticks after a tap. */
+@media (hover: hover){button:not(:disabled):hover{border-color:var(--accent)}}
+button:not(:disabled):active{border-color:var(--accent)}
 button:focus-visible,.grip:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 button.primary{background:var(--accent);border-color:var(--accent);color:var(--panel);font-weight:600;padding:9px 14px}
 button:disabled{opacity:.35;cursor:default}
@@ -67,7 +69,8 @@ summary{cursor:pointer;font-weight:500}
 .ask .pair{display:grid;grid-template-columns:minmax(0,1fr);gap:8px}
 @media (min-width:560px){.ask .pair{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}}
 .ask button.choice{text-align:left;padding:12px;min-height:64px;border-width:2px;font-weight:500}
-.ask button.choice:hover{border-color:var(--accent);background:var(--accent-soft)}
+@media (hover: hover){.ask button.choice:hover{border-color:var(--accent);background:var(--accent-soft)}}
+.ask button.choice:active{border-color:var(--accent);background:var(--accent-soft)}
 .ask .q{font-family:var(--display);font-size:1.05rem}
 .tie{font-size:.78rem;color:var(--muted);margin-left:6px}
 [hidden]{display:none!important}
@@ -305,6 +308,9 @@ $("ask-a").addEventListener("click", () => pwAnswer("a"));
 $("ask-b").addEventListener("click", () => pwAnswer("b"));
 $("ask-same").addEventListener("click", () => pwAnswer("same"));
 $("ask-back").addEventListener("click", () => { if (pwHistory.length) { pw = JSON.parse(pwHistory.pop()); pwNext(); } });
+// After a tap or click, drop focus so the button does not look chosen on the next question.
+// A keyboard press (detail 0) keeps focus, so keyboard users keep their place.
+document.addEventListener("click", e => { const b = e.target.closest("button"); if (b && e.detail > 0) b.blur(); });
 $("ask-stop").addEventListener("click", () => { pw = null; $("ask-live").hidden = true; $("ask-idle").hidden = false; });
 document.getElementById("copy").addEventListener("click", () => {
   const out = document.getElementById("out"), msg = document.getElementById("copied");
