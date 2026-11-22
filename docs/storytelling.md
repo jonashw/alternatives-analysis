@@ -119,7 +119,7 @@ Then, in the parent:
 3. **Whole-piece But / Therefore pass** on the assembled script (per entry point and per screen when it is non-linear).
 4. The parent has a decision matrix of its own **only** when there are whole-piece alternatives to compare (for example, two complete assemblies). Otherwise its decision is the roll-up table.
 
-The [Criteria Ranker](https://alternatives.jonashw.dev/toolkit/criteria-ranker.html?example=parts) can hold a parent and its parts on one page: one ranking, the shared gates shown once, a column for the director's delight score, and the roll-up table.
+The [Criteria Ranker](https://alternatives.jonashw.dev/toolkit/criteria-ranker.html?example=parts) can hold a parent and its parts on one page: one ranking, the shared gates shown once, a row of 1 to 5 the director taps for each option's delight score, and the roll-up table.
 
 ---
 
@@ -198,7 +198,8 @@ Suggested gates (adapt per story):
 1. **Source words.** Doesn't change the source author's words. Adding is welcome ("yes, and").
 2. **Audience safety.** Nothing cruel, harmful or misleading on the surface for the intended audience. Darker readings are fine underneath, for older viewers.
 3. **Ownership.** No copying of others' owned characters. Homage and credited influence are welcome.
-4. **Works unattended.** Required when any setting of use has nobody to interact (see Settings of Use). Every beat plays, advances and reads with no input.
+4. **True to the facts.** For stories that show real things (science, nature, history). Every claim is true, or is a listed departure from reality, or is a shout claim whose correction is listed and shown (see Two Voices).
+5. **Works unattended.** Required when any setting of use has nobody to interact (see Settings of Use). Every beat plays, advances and reads with no input.
 
 **Zero-veto mode (alternative).** Instead of screening options out, a gate can sit in the matrix as a row with no weight, scored **0** (fails) or **1** (passes). Any 0 sets that option's total to 0:
 
@@ -341,7 +342,7 @@ Every shout claim that is not literally true is listed with its correction:
 |---|---|---|
 | *An overstated claim, shouted* | *The true statement* | *The same screen, a few seconds later, in the plain voice* |
 
-A fact gate judges the pair, not the shout line alone: a listed shout claim with its correction shown in the same setting passes. A shout claim with no listed correction fails. In settings where the viewer may leave before the correction (a looping wall, a skippable screen), the correction must appear before they can leave.
+The **True to the facts** gate judges the pair, not the shout line alone: a listed shout claim with its correction shown in the same setting passes. A shout claim with no listed correction fails. In settings where the viewer may leave before the correction (a looping wall, a skippable screen), the correction must appear before they can leave.
 
 ### Standard Part: Visual Style and Level of Realism
 

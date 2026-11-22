@@ -80,7 +80,13 @@ summary{cursor:pointer;font-weight:500}
 .opts .bar{height:8px;border-radius:4px;background:var(--accent-soft);overflow:hidden;min-width:60px}
 .opts .bar i{display:block;height:100%;background:var(--accent)}
 .opts tr.win .bar i{background:var(--win)}
-select{font:inherit;color:var(--fg);background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:3px 4px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg label{position:relative;display:block}
+.seg input{position:absolute;opacity:0;inset:0;margin:0;cursor:pointer}
+.seg span{display:flex;align-items:center;justify-content:center;min-width:34px;min-height:36px;font-variant-numeric:tabular-nums;border-left:1px solid var(--line);color:var(--muted)}
+.seg label:first-child span{border-left:0}
+.seg input:checked+span{background:var(--accent);color:var(--panel);font-weight:600}
+.seg input:focus-visible+span{outline:2px solid var(--accent);outline-offset:-2px}
 .pass{color:var(--accent);font-weight:600}
 .fail{color:var(--win);font-weight:600}
 .multi .cols{grid-template-columns:minmax(0,1fr)}
@@ -153,7 +159,7 @@ select{font:inherit;color:var(--fg);background:var(--panel);border:1px solid var
     <details>
       <summary>Scores behind the result (1 poor to 5 excellent)</summary>
       <div id="scores" style="margin-top:10px;display:flex;flex-direction:column;gap:12px"></div>
-      <p class="small" style="margin-top:8px">Scores stay fixed here, except the director's scores, which you set on the page. Only the weights change with your ranking. Notes on each criterion say which scores are measured and which are estimates.</p>
+      <p class="small" style="margin-top:8px">Scores stay fixed here, except the director's scores, which you tap on the page. Only the weights change with your ranking. Notes on each criterion say which scores are measured and which are estimates.</p>
     </details>
   </section>
 </div>
@@ -220,7 +226,7 @@ if (MULTI) document.body.classList.add("multi");
 document.title = MULTI ? "Criteria Ranker, parent and parts" : "Criteria Ranker";
 document.getElementById("title").textContent = D.title || "Rank what matters";
 document.getElementById("lede").textContent = MULTI
-  ? "One ranking sets the weights for every part of this decision. Put the criteria in order, most important at the top, by answering a short run of \"which matters more?\" questions or by dragging. Score the director's column for each part, then copy the result and paste it into the thread."
+  ? "One ranking sets the weights for every part of this decision. Put the criteria in order, most important at the top, by answering a short run of \"which matters more?\" questions or by dragging. Tap the director's score for each option, then copy the result and paste it into the thread."
   : "Put the criteria in order, most important at the top. Either answer a short run of \"which matters more?\" questions, or drag the list yourself. The weights and the winning option update as you go. When it looks right, copy the result and paste it into the thread.";
 
 const byId = Object.fromEntries(D.criteria.map(c => [c.id, c]));
@@ -348,8 +354,9 @@ function render() {
       const failed = failedGates(p, j), veto = failed.length > 0;
       t += '<tr class="' + (j === a.top && a.alive.length ? "win" : "") + (veto ? " veto" : "") + '"><td>' + esc(p.alternatives[j]) + '</td>' +
         (gateCols.length ? '<td>' + (veto ? '<span class="fail">Vetoed:</span> ' + esc(failed.join(", ")) : '<span class="pass">Pass</span>') + '</td>' : '') +
-        dirIds.map(id => '<td><select data-part="' + esc(p.id) + '" data-crit="' + id + '" data-alt="' + j + '" aria-label="' + esc(byId[id].name) + ' for ' + esc(p.alternatives[j]) + '">' +
-          '<option value="">–</option>' + [1, 2, 3, 4, 5].map(n => '<option' + (score(p, id, j) === n ? " selected" : "") + '>' + n + '</option>').join("") + '</select></td>').join("") +
+        dirIds.map(id => '<td><div class="seg" role="radiogroup" aria-label="' + esc(byId[id].name) + ' for ' + esc(p.alternatives[j]) + '">' +
+          [1, 2, 3, 4, 5].map(n => '<label><input type="radio" name="d-' + esc(p.id) + '-' + id + '-' + j + '" value="' + n + '" data-part="' + esc(p.id) + '" data-crit="' + id + '" data-alt="' + j + '"' +
+            (score(p, id, j) === n ? " checked" : "") + '><span>' + n + '</span></label>').join("") + '</div></td>').join("") +
         '<td class="n">' + (veto ? "–" : a.v[j].toFixed(2)) + '</td>' +
         '<td>' + (veto ? "" : '<div class="bar"><i style="width:' + (100 * a.v[j] / 5).toFixed(1) + '%"></i></div>') + '</td></tr>';
     });
@@ -385,12 +392,12 @@ function failedGatesText(p) {
 }
 
 document.getElementById("results").addEventListener("change", e => {
-  const s = e.target.closest("select[data-crit]"); if (!s) return;
+  const s = e.target.closest("input[data-crit]"); if (!s) return;
   const p = s.dataset.part, c = s.dataset.crit, j = Number(s.dataset.alt);
   director[p] = director[p] || {}; director[p][c] = director[p][c] || []; director[p][c][j] = s.value ? Number(s.value) : null;
   try { localStorage.setItem(DKEY, JSON.stringify(director)); } catch (err) {}
   render();
-  const again = document.querySelector('select[data-part="' + p + '"][data-crit="' + c + '"][data-alt="' + j + '"]'); if (again) again.focus();
+  const again = document.querySelector('input[data-part="' + p + '"][data-crit="' + c + '"][data-alt="' + j + '"][value="' + s.value + '"]'); if (again) again.focus();
 });
 list.addEventListener("click", e => {
   const b = e.target.closest("button[data-move]"); if (!b) return;
