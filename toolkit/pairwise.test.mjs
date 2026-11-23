@@ -178,7 +178,7 @@ test('upgrading a ranker keeps its decision and takes the new page', async () =>
   const old = '<title>Old Ranker</title><header><h1>Old decision</h1></header>\n<script>\nconst DATA = {\n  key: "old-one",\n  criteria: []\n};\n</script>' +
     '<p class="small" style="margin-top:8px">Old note.</p>';
   const page = upgrade(old, template);
-  for (const kept of ['<title>Old Ranker</title>', '<h1>Old decision</h1>', 'key: "old-one"', 'Old note.']) assert.ok(page.includes(kept), kept);
+  for (const kept of ['<title>Old Ranker</title>', '<h1 id="title">Old decision</h1>', 'key: "old-one"', 'Old note.']) assert.ok(page.includes(kept), kept);
   assert.ok(page.includes('// BEGIN pairwise.js'));
   assert.ok(!page.includes('example-chat-tool'));
   assert.throws(() => upgrade('<title>x</title>', template));

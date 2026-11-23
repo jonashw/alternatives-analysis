@@ -18,7 +18,10 @@ export const upgrade = (oldPage, template) => {
   for (const [name, re] of Object.entries(parts)) {
     const found = re.exec(oldPage);
     if (!found) { if (name === 'scoresNote') continue; throw new Error('No ' + name + ' found in the old page'); }
-    page = page.replace(re, () => found[0]);
+    let part = found[0];
+    // The current page fills an empty #title and #lede from DATA; an older header keeps its own words.
+    if (name === 'header') part = part.replace(/<h1(?![^>]*\bid=)/, '<h1 id="title"').replace(/<p class="lede"(?![^>]*\bid=)/, '<p class="lede" id="lede"');
+    page = page.replace(re, () => part);
   }
   return page;
 };

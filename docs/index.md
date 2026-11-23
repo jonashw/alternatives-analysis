@@ -6,7 +6,7 @@ The specification comes in three variants. Pick the one that fits the decision:
 
 - **[Software](https://alternatives.jonashw.dev/software.md)** (primary): contextualized to software architecture and engineering decisions.
 - **[General](https://alternatives.jonashw.dev/general.md)**: domain-general, for decisions in any field.
-- **[Storytelling](https://alternatives.jonashw.dev/storytelling.md)**: for story decisions: scripts, cutscenes, characters and lore. Adds viability gates, a required wild option, and the director's call on close margins.
+- **[Storytelling](https://alternatives.jonashw.dev/storytelling.md)**: for story decisions: scripts, cutscenes, characters and lore. Adds viability gates, a required wild option, the director's call on close margins, settings of use, and decisions made of parts.
 
 Each page is also served as raw Markdown at the `.md` URL linked above, for agents and tools that consume the source directly.
 
