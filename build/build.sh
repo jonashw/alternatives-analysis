@@ -3,7 +3,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 rm -rf _site && mkdir -p _site
-cp CNAME llms.txt build/style.css _site/
+cp CNAME llms.txt robots.txt build/style.css _site/
 cp -r toolkit _site/toolkit
 for src in docs/*.md; do
   name=$(basename "$src" .md)

@@ -1,0 +1,4 @@
+# This site is published know-how. All crawlers, including AI search and training crawlers, are welcome.
+# Standard: https://reliability.jonashw.dev/crawlers.md
+User-agent: *
+Allow: /
