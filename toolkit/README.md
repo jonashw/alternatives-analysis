@@ -2,13 +2,15 @@
 
 Tools that go with the Alternatives Analysis spec (see "Weight Elicitation" in the spec).
 
-- `criteria-ranker.html`: the decision owner sets the weights on one page. Two modes:
-  - **Pairwise questions:** "Which matters more to you?", one pair at a time, sorted by binary insertion. Answers are one of the two or "About the same" (a tie). "Back one question" undoes one answer. The start order is shuffled with a fixed seed.
+- `criteria-ranker.html`: the decision owner sets the weights on one page. One file, nothing to install: it works as a Claude artifact, on this site, or opened from disk. Two modes:
+  - **Pairwise questions:** "Which matters more to you?", one pair at a time, sorted by binary insertion. Answers are one of the two or "About the same", which joins the whole tie group (the question names everyone in it). One fixed bar above the choices: stop, back, About the same, forward. Hotkeys on a keyboard: 1, 2, =, left arrow, right arrow or Enter, Esc. The start order is shuffled with a fixed seed.
+  - **Check questions:** after the last answer, up to three neighbouring pairs near the top are asked again. A reversal or "about the same" turns the pair into a tie. Stop skips them.
+  - **Back, review and saved runs:** the finished screen has a back arrow (reopens the last question) and **Review answers**, which replays the run showing each earlier answer: forward keeps it, a different pick changes it. The order, answers, ties and checks are saved together, an unfinished run offers **Carry on** after a reload, and a pasted copy of a finished run can be reopened or reviewed.
   - **Drag:** drag handles plus up and down arrows, for phones. Dragging after the questions clears the ties and the answer record.
   - Live: each criterion's weight (steep = rank-order centroid, gentle = rank-sum; tied neighbours share the mean), the winner and runner-up, a 2,000-trial ±20% weight check, and whether the analyst's draft weights picked the same winner.
-  - Returns the ranking, the winner and the full pairwise answer list as text for the owner to paste back. That text is the record.
-  - **To reuse:** copy the file, replace the `DATA` block (`key`, `alternatives`, `criteria` with `id`, `name`, `scores` per alternative, optional `note`, and `draftWeights`), change the `<title>` and `<h1>`, and publish it.
-- `pairwise.js`: the question engine on its own, for ranking anything by "which of these two?". ES module, no page, no weights. `start(ids, answers)`, `read(state)` (next question, order best first, ties, answers used, worst-case questions left), `answer(state, preferredId or '=')`, `undo`, `worstCase(count)`, `checkQuestions(state, count, importance)` and `withChecks` (re-ask a few earlier pairs to catch drift). Answers are `{a, b, result}` with `'>'` or `'='`; state is replayed from the answers, so earlier answers can seed a run.
-- `pairwise.test.mjs`: `node --test toolkit/pairwise.test.mjs`.
-
-Known gaps: the ranker page still carries its own inline copy of the engine instead of importing `pairwise.js`, does not offer the end-of-run check questions, and cannot be seeded from earlier answers.
+  - Returns the ranking, the winner, the pairwise answers and the check answers as text for the owner to paste back. That text is the record.
+  - **To reuse:** copy the file, replace the `DATA` block (`key`, `alternatives`, `criteria` with `id`, `name`, `scores` per alternative, optional `note`, and `draftWeights`), change the `<title>` and the `<header>`, and publish it. Name each criterion by why it matters (see "Name the reason, not just the feature" in the spec).
+  - **To upgrade a ranker already in use:** `node toolkit/upgrade.mjs old-ranker.html > new-ranker.html`. It keeps the old page's title, header, `DATA` and scores note and takes everything else from the current page. Saved answers carry over in the viewer's browser because `DATA.key` stays the same. Publish the result at the same address.
+- `pairwise.js`: the question rules on their own, for ranking anything by "which of these two?". ES module, no page, no weights. `start`, `read` (next question with its tie group, order best first, groups, ties, answers used, worst-case questions left), `answer`, `undo`, `shuffle`, `worstCase`, `checkQuestions` and `withChecks`, plus sessions for back, forward and review: `session(ids, { prior })`, `sessionAnswer`, `back`, `forward`, `earlier`, and `parseAnswers` for copied text. Answers are `{a, b, result}` with `'>'` or `'='`.
+- `inline.mjs`: copies `pairwise.js` into `criteria-ranker.html`. Edit `pairwise.js`, then run `node toolkit/inline.mjs`. A test fails if the page's copy has drifted.
+- `pairwise.test.mjs`: `node --test toolkit/pairwise.test.mjs`. The site deploy runs it first.

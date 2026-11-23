@@ -185,6 +185,8 @@ Organize criteria into layers:
 
 ##### Starter Criteria (adapt per story)
 
+Name each criterion by why it matters, not by the feature: the director ranks the name. See "Name the reason, not just the feature" in the [general variant](https://alternatives.jonashw.dev/general.md).
+
 | Criterion | Suggested weight | 1 means | 3 means | 5 means |
 |---|---|---|---|---|
 | True to source | 0.15 | It contradicts the source | It changes some of the source's words | It keeps the words; additions welcome |
