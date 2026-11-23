@@ -457,7 +457,8 @@ const PARTS = D.parts ? D.parts : [{ id: "", name: "", alternatives: D.alternati
 const MULTI = !!D.parts;
 const GATES = D.gates || [];
 if (MULTI) document.body.classList.add("multi");
-document.title = MULTI ? "Criteria Ranker, parent and parts" : "Criteria Ranker";
+// A copy's own <title> (for example "Backup Store Ranker") names its tab; only the generic one changes for the parts example.
+if (MULTI && document.title === "Criteria Ranker") document.title = "Criteria Ranker, parent and parts";
 // An upgraded older ranker keeps its own heading and intro; otherwise they come from DATA.
 if (!document.getElementById("title").textContent.trim()) document.getElementById("title").textContent = D.title || "Rank what matters";
 if (!document.getElementById("lede").textContent.trim()) document.getElementById("lede").textContent = MULTI
