@@ -125,6 +125,8 @@ Organize criteria into layers:
 3. **Quality & Outcomes** — effectiveness, reliability, sustainability, adaptability, stakeholder satisfaction.
 4. **Operational Fit** — ongoing effort and maintenance, dependency or lock-in risk, ease of operation, monitoring and feedback.
 
+> **Name the reason, not just the feature.** A criterion's name should say why it matters, because the owner ranks the name. "Has an export button" invites a ranking of the button; "Data can leave with us if we switch (export)" ranks the reason. When a feature serves several needs, name them: "Every record is readable by software (screen readers, tests, other systems)", not "Works with screen readers".
+
 > When selecting criteria, ensure ongoing and non-obvious obligations (maintenance effort, risk, dependencies, feedback and monitoring, transition cost) are represented as criteria rows rather than overlooked.
 
 ##### Rules
@@ -143,18 +145,21 @@ The decision owner sets the weights, not the analyst. The analyst drafts weights
 2. **Rank, don't rate.** The owner orders the criteria from most to least important. Ordering is easier to do honestly than assigning numbers, and it is easier to defend.
 3. **Sort by pairwise questions.** Ask the owner one question at a time, "Which matters more to you, A or B?", and sort the criteria from the answers with a **binary insertion sort**, using the owner's judgment as the comparison:
    - **Answers.** The owner picks one of the two, or "about the same", which records a tie. There are no strength levels and no ratio judgments. The method is ordinal; it is not AHP.
-   - **Fewest questions.** Binary insertion never asks a pair whose answer is already implied. Seven criteria take at most 14 questions, ten at most 22 to 25 (bubble sort can need 45).
+   - **Ties are groups.** "About the same" joins the criterion to the whole group it was compared with. Later criteria are placed above or below the group as a whole, so a tie is never split, and the question names every member of the group.
+   - **Fewest questions.** Binary insertion never asks a pair whose answer is already implied. Seven criteria take at most 14 questions, ten at most 25 (bubble sort can need 45). Each tie removes questions.
    - **No leading.** Shuffle the starting order with a fixed seed, so the analyst's draft order does not steer the owner.
-   - **Undo.** Let the owner take back the last answer at any time.
-   - **Consistency.** One insertion run cannot contradict itself, because it never asks an implied pair. To test consistency, optionally re-ask a few neighbouring pairs at the end, nearest the top first; a reversal or "about the same" turns that pair into a tie.
+   - **Back and forward.** Let the owner step back at any time, including from the finished result. Stepping forward again keeps the answers stepped over.
+   - **Review.** Let the owner go through a finished run one question at a time. Each question shows the earlier answer; the owner keeps it or picks another. A changed answer can lead to new questions, and those say they are new. Keeping every answer gives the same ranking.
+   - **Check questions.** One insertion run cannot contradict itself, because it never asks an implied pair, but it often places neighbours without comparing them directly. At the end, re-ask a few neighbouring pairs (three by default), nearest the top first, where a flip moves the most weight. A reversal or "about the same" turns that pair into a tie. The owner may skip them.
+   - **Keep the run.** Save the answers with the order, so a reload or a paused run loses nothing.
    - **Seeding.** Either/or answers the owner already gave in discussion may seed the sort.
 4. **Or drag.** As an alternative, the owner drags a list into order. Where the owner has done both and the orders differ, the owner picks which one is the record.
 5. **Convert the order to weights.** Record which conversion was used. For $n$ criteria ranked $i = 1 \dots n$:
    - **Steep** (rank-order centroid): $W_i = \frac{1}{n}\sum_{k=i}^{n}\frac{1}{k}$
    - **Gentle** (rank-sum): $W_i = \frac{2(n + 1 - i)}{n(n + 1)}$
    - **Ties.** Tied neighbours share the mean of the weights for the ranks they span.
-6. **Keep the record.** Record the owner's ranking, the conversion, and the full list of pairwise answers (for example `A > B, C = D`) verbatim. The answers justify the ranking later. Keep the draft weights in the document for comparison.
-7. **Use a live tool.** Give the owner a page that asks the questions (and allows dragging), shows the weights and the winning alternative live, and returns the ranking and answers as text to paste back. A reusable one is the [Criteria Ranker](https://alternatives.jonashw.dev/toolkit/criteria-ranker.html).
+6. **Keep the record.** Record the owner's ranking, the conversion, the full list of pairwise answers (for example `A > B, C = D`) and the check answers verbatim. The answers justify the ranking later. Keep the draft weights in the document for comparison.
+7. **Use a live tool.** Give the owner a page that asks the questions (and allows dragging), shows the weights and the winning alternative live, and returns the ranking and answers as text to paste back. The copied text can be pasted back in later to reopen or review the run. A reusable one is the [Criteria Ranker](https://alternatives.jonashw.dev/toolkit/criteria-ranker.html).
 
 ##### Robustness
 

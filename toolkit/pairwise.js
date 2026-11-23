@@ -10,6 +10,17 @@
 // As text: "A > B", "A = B". What the order means (importance, preference, closeness to a
 // reference) and what to do with it (weights, a next step) is the caller's business.
 
+/**
+ * A fixed-seed shuffle, so the starting order doesn't follow the analyst's draft but is the same
+ * every time (a pasted answer list then replays through the same questions).
+ */
+export const shuffle = (ids, seed = 7) => {
+  const r = () => (seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296;
+  const a = [...ids];
+  for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
+  return a;
+};
+
 /** Start a run. `answers` may hold earlier answers to reuse. */
 export const start = (ids, answers = []) => ({ ids: [...ids], answers: [...answers] });
 
@@ -58,7 +69,8 @@ export const read = ({ ids, answers }) => {
       if (result === undefined) {
         let remaining = worstFor(hi - lo);
         for (let n = groups.length + 1, k = i + 1; k < ids.length; k++, n++) remaining += worstFor(n);
-        return { question: { a: item, b: other }, ...snapshot(), used, remaining, done: false };
+        // group: everyone the other item was called "about the same" as, so the question can name them all.
+        return { question: { a: item, b: other, group: groups[mid].slice() }, ...snapshot(), used, remaining, done: false };
       }
       used.push(result === '<' ? { a: other, b: item, result: '>' } : { a: item, b: other, result });
       if (result === '>') hi = mid;
@@ -117,3 +129,58 @@ export const withChecks = (state, checks) => {
   const reversed = checks.filter(c => c.preferred !== c.a).map(c => [c.a, c.b]);
   return { ...result, ties: [...result.ties, ...reversed], reversals: reversed };
 };
+
+// ---- Sessions: back, forward and review on top of a run ----
+// A session is { state, ahead, prior }. `ahead` holds answers stepped back over (newest first);
+// `prior` holds an earlier run's answers under review. Neither is applied by itself: each question
+// shows the earlier answer for its pair, and the person keeps it (forward) or picks another.
+
+/** Start a session. `prior`: earlier answers to review one by one. */
+export const session = (ids, { prior = [] } = {}) => ({ state: start(ids), ahead: [], prior: [...prior] });
+
+const samePair = (x, a, b) => keyOf(x.a, x.b) === keyOf(a, b);
+
+/** The earlier answer for a pair, as the preferred id or "=", from the first list that has one. */
+export const earlierFor = (lists, a, b) => {
+  for (const list of lists) {
+    const found = [...list].reverse().find(x => samePair(x, a, b));
+    if (found) return found.result === '=' ? '=' : found.a;
+  }
+  return undefined;
+};
+
+/** The earlier answer to the current question, or undefined: a step taken back first, then the run under review. */
+export const earlier = s => {
+  const { question } = read(s.state);
+  return question ? earlierFor([s.ahead, s.prior], question.a, question.b) : undefined;
+};
+
+/** Answer the current question. A stepped-over answer for the same pair is used up. */
+export const sessionAnswer = (s, preferred) => {
+  const { question } = read(s.state);
+  if (!question) return s;
+  return { ...s, state: answer(s.state, preferred), ahead: s.ahead.filter(x => !samePair(x, question.a, question.b)) };
+};
+
+/** Step back one question; the answer taken back waits in `ahead`, so forward can redo it. */
+export const back = s => {
+  const last = s.state.answers.at(-1);
+  return last ? { ...s, state: undo(s.state), ahead: [last, ...s.ahead] } : s;
+};
+
+/** Keep the earlier answer to the current question (if there is one) and move on. */
+export const forward = s => {
+  const was = earlier(s);
+  return was === undefined ? s : sessionAnswer(s, was);
+};
+
+/** Read answers back from text such as "R2 > R4, R10 = R2". Returns null if any part doesn't read. */
+export const parseAnswers = text => {
+  const parts = text.split(',').map(x => x.trim()).filter(Boolean);
+  const out = parts.map(x => { const m = /^(\S+)\s*([>=])\s*(\S+)$/.exec(x); return m && { a: m[1], b: m[3], result: m[2] }; });
+  return out.some(x => !x) ? null : out;
+};
+
+/** A check answer ({ a, b, preferred }, a placed higher) as a plain answer: "A > B", "B > A" or "A = B". */
+export const checkAnswer = c => c.preferred === '=' ? { a: c.a, b: c.b, result: '=' }
+  : { a: c.preferred, b: c.preferred === c.a ? c.b : c.a, result: '>' };

@@ -22,6 +22,7 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
+      - run: node --test toolkit/pairwise.test.mjs
       - run: sudo apt-get update && sudo apt-get install -y pandoc
       - run: build/build.sh
       - uses: actions/configure-pages@v5
