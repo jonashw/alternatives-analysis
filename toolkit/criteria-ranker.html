@@ -84,12 +84,15 @@ summary{cursor:pointer;font-weight:500}
 .ask-bar button.icon svg{width:22px;height:22px}
 .ask-bar kbd{font:inherit;font-size:.78em;opacity:.7;border:1px solid currentColor;border-radius:4px;padding:0 4px}
 @media (max-width:559px){.ask-bar kbd,.ask .q .small{display:none}.ask-bar button{padding:4px 6px;line-height:1.2}}
-.ask .q{font-family:var(--display);font-size:1.05rem;margin:0;line-height:1.4;height:1.4em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ask .q{font-family:var(--display);font-size:1.05rem;margin:0;line-height:1.4;text-wrap:balance}
 .ask .done-line{margin:0;font-weight:600}
 .ask .done-line:empty{display:none}
 #ask-progress{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin:0}
 /* The earlier answer, marked in review and after stepping back: a dashed outline plus words, never colour alone. */
 .prior-note{margin:0;font-weight:600;color:var(--ask)}
+.changed-note{margin:0;padding:10px 12px;border-radius:8px;background:var(--accent-soft);display:flex;flex-direction:column;gap:8px}
+.changed-note ul{margin:0;padding-left:1.2em}
+.ask button.choice .reworded{display:block;margin-top:4px;font-size:.82em;font-weight:600;color:var(--ask)}
 button.was{border:2px dashed var(--ask)}
 .ask button.choice.was::after{content:" (your earlier answer)";font-weight:600;color:var(--ask)}
 .ask-bar #ask-same.was::after{content:" (earlier)";color:var(--ask)}
@@ -128,6 +131,10 @@ button.was{border:2px dashed var(--ask)}
     <h2 id="h-ask">Answer questions instead of dragging</h2>
     <div id="ask-idle" class="ask">
       <p class="done-line" id="ask-done" role="status"></p>
+      <div class="changed-note" id="ask-changed" role="status" hidden>
+        <span id="ask-changed-text"></span><ul id="ask-changed-list"></ul>
+        <div class="row"><button id="ask-changed-review" class="primary" type="button">Review my answers</button><button id="ask-changed-keep" type="button">Keep my answers</button></div>
+      </div>
       <p class="small" id="ask-intro"></p>
       <div class="ask-bar idle-bar" role="toolbar" aria-label="Question controls">
         <button id="ask-reopen" class="icon" type="button" hidden aria-label="Back to the last question" title="Back to the last question"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
@@ -149,7 +156,7 @@ button.was{border:2px dashed var(--ask)}
         <button id="ask-same" type="button" title="About the same (=)">About the same <kbd>=</kbd></button>
         <button id="ask-keep" class="icon" type="button" aria-label="Forward: keep my earlier answer" title="Forward: keep my earlier answer (Right arrow or Enter)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
       </div>
-      <p class="q"><span id="ask-q">Which matters more to you?</span> <span class="small">(1 or 2)</span></p>
+      <p class="q"><span id="ask-q"></span> <span class="small">(1 or 2)</span></p>
       <div class="pair"><button class="choice" id="ask-a" type="button"></button><button class="choice" id="ask-b" type="button"></button></div>
       <p class="prior-note" id="ask-prior" hidden></p>
     </div>
@@ -160,7 +167,7 @@ button.was{border:2px dashed var(--ask)}
       <h2 id="h-rank">Your ranking</h2>
       <p class="small" id="rank-help">Drag by the handle, or use the arrows. Purple notes mark the spots the analyst was unsure about.</p>
       <ol class="rank" id="rank"></ol>
-      <fieldset>
+      <fieldset id="curve-box">
         <legend>How steeply should the weights fall from top to bottom?</legend>
         <label class="opt"><input type="radio" name="curve" id="curve-roc" value="roc" checked> Steep (top items dominate)</label>
         <label class="opt"><input type="radio" name="curve" id="curve-sum" value="sum"> Gentle (even steps)</label>
@@ -177,7 +184,7 @@ button.was{border:2px dashed var(--ask)}
         <ul id="gates" style="margin:0;padding-left:1.2em"></ul>
       </section>
 
-      <section class="panel" aria-labelledby="h-res">
+      <section class="panel" aria-labelledby="h-res" id="res-panel">
         <h2 id="h-res">Result with this ranking</h2>
         <div id="results" style="display:flex;flex-direction:column;gap:16px"></div>
       </section>
@@ -196,7 +203,7 @@ button.was{border:2px dashed var(--ask)}
     </div>
   </div>
 
-  <section class="panel">
+  <section class="panel" id="scores-panel">
     <details>
       <summary>Scores behind the result (1 poor to 5 excellent)</summary>
       <div id="scores" style="margin-top:10px;display:flex;flex-direction:column;gap:12px"></div>
@@ -406,6 +413,10 @@ return { shuffle, start, read, answer, undo, worstCase, answerText, checkQuestio
 //  - A parent with parts: criteria without scores (the parent's shared ranking), optional shared gates,
 //    and parts, each with its own alternatives, scores by criterion id, and gate results.
 //    A criterion marked director:true is scored on the page by the director (for example, delight).
+//  - A list only: items in criteria, with no alternatives and no parts. The page ranks them and shows no
+//    weights or winner (for example, which site hurts most when it's down). Optional wording for it:
+//    question ("Which one being down for a day would hurt you more?"), more ("hurts more"), noun ("sites"),
+//    and oldKey, the storage key of an older hand-built page whose { answers } should carry over once.
 const DATA = {
   // Example decision. Replace this whole block for a real analysis.
   key: "example-chat-tool",
@@ -452,9 +463,13 @@ const PARTS_EXAMPLE = {
 const D = new URLSearchParams(location.search).get("example") === "parts" ? PARTS_EXAMPLE : DATA;
 
 // Normalize both shapes into parts. A single decision is one unnamed part.
-const PARTS = D.parts ? D.parts : [{ id: "", name: "", alternatives: D.alternatives,
+const PARTS = D.parts ? D.parts : !(D.alternatives || []).length ? [] : [{ id: "", name: "", alternatives: D.alternatives,
   scores: Object.fromEntries(D.criteria.filter(c => c.scores).map(c => [c.id, c.scores])), gates: {} }];
 const MULTI = !!D.parts;
+const LIST = !D.parts && !(D.alternatives || []).length;
+const QUESTION = D.question || "Which matters more to you?", MORE = D.more || "matters more", NOUN = D.noun || "criteria";
+if (LIST) { document.body.classList.add("list"); ["curve-box", "res-panel", "scores-panel"].forEach(id => document.getElementById(id).hidden = true);
+  document.getElementById("rank-help").textContent = "Drag by the handle, or use the arrows."; }
 const GATES = D.gates || [];
 if (MULTI) document.body.classList.add("multi");
 // A copy's own <title> (for example "Backup Store Ranker") names its tab; only the generic one changes for the parts example.
@@ -463,6 +478,7 @@ if (MULTI && document.title === "Criteria Ranker") document.title = "Criteria Ra
 if (!document.getElementById("title").textContent.trim()) document.getElementById("title").textContent = D.title || "Rank what matters";
 if (!document.getElementById("lede").textContent.trim()) document.getElementById("lede").textContent = MULTI
   ? "One ranking sets the weights for every part of this decision. Put the criteria in order, most important at the top, by answering a short run of \"which matters more?\" questions or by dragging. Tap the director's score for each option, then copy the result and paste it into the thread."
+  : LIST ? "Put the " + NOUN + " in order, top first. Either answer a short run of questions, or drag the list yourself. When it looks right, copy the result and paste it into the thread."
   : "Put the criteria in order, most important at the top. Either answer a short run of \"which matters more?\" questions, or drag the list yourself. The weights and the winning option update as you go. When it looks right, copy the result and paste it into the thread.";
 
 const byId = Object.fromEntries(D.criteria.map(c => [c.id, c]));
@@ -473,13 +489,22 @@ const DKEY = "director-scores-" + (D.key || "default");
 let ties = [];      // pairs [a, b] the owner called "about the same"; ties chain, so A = B and B = C put all three in one group
 let answers = [];   // the pairwise answers, kept as the record
 let checks = [];    // the check answers at the end, { a, b, preferred } with a placed higher
+// Each criterion's wording when the answers were given. If a name has changed since, the page says so and offers a review.
+const currentNames = () => Object.fromEntries(D.criteria.map(c => [c.id, c.name]));
+let answeredNames = currentNames();
 // The order, answers, ties and checks are saved together, so a reload keeps the record (it didn't before 2026-11-23).
 try { const s = JSON.parse(localStorage.getItem(KEY) || "null");
   if (Array.isArray(s) && s.length === startOrder.length && s.every(x => byId[x])) order = s;
   const r = JSON.parse(localStorage.getItem(KEY + "-record") || "null");
   if (r && Array.isArray(r.order) && r.order.join() === order.join()) { ties = r.ties || []; checks = r.checks || [];
+    if (r.names && typeof r.names === "object") answeredNames = { ...currentNames(), ...r.names };
     // Older copies saved answers as { a, b, ans: "a" | "b" | "same" }.
-    answers = (r.answers || []).map(x => x.result ? x : x.ans === "same" ? { a: x.a, b: x.b, result: "=" } : x.ans === "a" ? { a: x.a, b: x.b, result: ">" } : { a: x.b, b: x.a, result: ">" }); } } catch (e) {}
+    answers = (r.answers || []).map(x => x.result ? x : x.ans === "same" ? { a: x.a, b: x.b, result: "=" } : x.ans === "a" ? { a: x.a, b: x.b, result: ">" } : { a: x.b, b: x.a, result: ">" }); }
+  // An older hand-built page saved only { answers } under its own key, asked in the DATA order: replay them once.
+  if (D.oldKey && !localStorage.getItem(KEY + "-imported") && !answers.length) { localStorage.setItem(KEY + "-imported", "1");
+    const o = JSON.parse(localStorage.getItem(D.oldKey) || "null");
+    if (o && Array.isArray(o.answers) && o.answers.length) { const got = Pairwise.read(Pairwise.start(startOrder, o.answers));
+      if (got.done) { order = got.order.slice(); answers = got.used.slice(); ties = got.groups.flatMap(g => g.slice(1).map(x => [g[0], x])); } } } } catch (e) {}
 let director = {};  // director's scores, by part id, criterion id and alternative index
 try { director = JSON.parse(localStorage.getItem(DKEY) || "{}") || {}; } catch (e) { director = {}; }
 function tieRoot(id) { const parent = {}; const find = x => parent[x] === undefined || parent[x] === x ? x : (parent[x] = find(parent[x]));
@@ -538,7 +563,9 @@ function analyse(p, wById) {
 
 const list = document.getElementById("rank");
 const esc = s => String(s).replace(/[&<>"]/g, ch => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[ch]));
+function reworded() { return answers.length ? startOrder.filter(id => answeredNames[id] !== byId[id].name) : []; }
 function render() {
+  if (!answers.length) answeredNames = currentNames();
   const w = weights(order.length, curve());
   // Neighbours called "about the same" share the average of their positions' weights.
   for (let i = 0; i < order.length; ) {
@@ -556,8 +583,8 @@ function render() {
       '<span class="grip" aria-hidden="true">⠿</span>' +
       '<div style="min-width:0"><div class="name"><span class="pos">' + (i + 1) + '</span> ' + esc(c.name) + ' <span class="small">(' + c.id + ')</span>' + (i > 0 && tied(order[i - 1], id) ? '<span class="tie">about the same as the one above</span>' : '') + '</div>' +
       (c.note ? '<div class="note">' + esc(c.note) + '</div>' : '') +
-      '<div class="meter"><i style="width:' + (100 * w[i] / max).toFixed(1) + '%"></i></div></div>' +
-      '<div class="side"><span class="pct">' + (100 * w[i]).toFixed(1) + '%</span>' +
+      (LIST ? '' : '<div class="meter"><i style="width:' + (100 * w[i] / max).toFixed(1) + '%"></i></div>') + '</div>' +
+      '<div class="side">' + (LIST ? '' : '<span class="pct">' + (100 * w[i]).toFixed(1) + '%</span>') +
       '<button type="button" data-move="-1" aria-label="Move ' + esc(c.name) + ' up"' + (i === 0 ? ' disabled' : '') + '>▲</button>' +
       '<button type="button" data-move="1" aria-label="Move ' + esc(c.name) + ' down"' + (i === order.length - 1 ? ' disabled' : '') + '>▼</button></div>';
     list.appendChild(li);
@@ -623,13 +650,13 @@ function render() {
     roll.map(r => '<tr><td>' + esc(r[0]) + '</td><td>' + esc(r[1]) + '</td><td class="n">' + r[2] + '</td><td class="n">' + r[3] + '</td><td>' + esc(r[4]) + '</td></tr>').join("");
 
   document.getElementById("out").value =
-    "My ranking (" + (curve() === "roc" ? "steep" : "gentle") + " weights):\n" +
-    order.map((id, i) => (i + 1) + ". " + id + " " + byId[id].name + " (" + (100 * w[i]).toFixed(1) + "%)" + (i > 0 && tied(order[i - 1], id) ? " [about the same as the one above]" : "")).join("\n") +
-    "\n" + (MULTI ? "Parts:\n" : "") + textParts.join("\n") +
+    (LIST ? "My ranking:\n" : "My ranking (" + (curve() === "roc" ? "steep" : "gentle") + " weights):\n") +
+    order.map((id, i) => (i + 1) + ". " + id + " " + byId[id].name + (LIST ? "" : " (" + (100 * w[i]).toFixed(1) + "%)") + (i > 0 && tied(order[i - 1], id) ? " [about the same as the one above]" : "")).join("\n") +
+    (LIST ? "" : "\n" + (MULTI ? "Parts:\n" : "") + textParts.join("\n")) +
     (answers.length ? "\nSet by " + answers.length + " pairwise answers: " + answers.map(x => Pairwise.answerText(x)).join(", ") : "") +
     (checks.length ? "\nChecked at the end: " + checks.map(c => Pairwise.answerText(Pairwise.checkAnswer(c)) +
       (c.preferred === c.a ? "" : c.preferred === "=" ? " (now tied)" : " (reversed, now tied)")).join(", ") : "");
-  try { localStorage.setItem(KEY, JSON.stringify(order)); localStorage.setItem(KEY + "-record", JSON.stringify({ order, ties, answers, checks })); } catch (e) {}
+  try { localStorage.setItem(KEY, JSON.stringify(order)); localStorage.setItem(KEY + "-record", JSON.stringify({ order, ties, answers, checks, names: answeredNames })); } catch (e) {}
 }
 function failedGatesText(p) {
   return p.alternatives.map((alt, j) => [alt, failedGates(p, j)]).filter(x => x[1].length).map(x => x[0] + " (" + x[1].join(", ") + ")").join(", ");
@@ -670,8 +697,8 @@ const pairOf = (x, a, b) => (x.a === a && x.b === b) || (x.a === b && x.b === a)
 const nameOf = id => byId[id].name;
 
 function introText() {
-  return "You compare two criteria at a time and the page sorts the list from your answers. It never asks a pair whose answer it can already work out, so " +
-    startOrder.length + " criteria take at most " + P.worstCase(startOrder.length) + " questions, fewer when you say \"About the same\". " +
+  return "You compare two " + NOUN + " at a time and the page sorts the list from your answers. It never asks a pair whose answer it can already work out, so " +
+    startOrder.length + " " + NOUN + " take at most " + P.worstCase(startOrder.length) + " questions, fewer when you say \"About the same\". " +
     "Then it asks up to " + CHECKS + " check questions near the top of the list, which you can skip. You can still drag afterwards.";
 }
 function newRun(prior, priorChecks) {
@@ -688,11 +715,11 @@ function where() {
 }
 function saveLive() {
   try { localStorage.setItem(KEY + "-live", JSON.stringify(run ? { answers: run.ses.state.answers, ahead: run.ses.ahead, prior: run.ses.prior,
-    checks: run.checks, checksAhead: run.checksAhead, priorChecks: run.priorChecks, skipChecks: run.skipChecks } : null)); } catch (e) {}
+    checks: run.checks, checksAhead: run.checksAhead, priorChecks: run.priorChecks, skipChecks: run.skipChecks, reworded: run.reworded || [] } : null)); } catch (e) {}
 }
 function loadLive(x) {
   return { ses: { state: P.start(runIds, x.answers || []), ahead: x.ahead || [], prior: x.prior || [] },
-    checks: x.checks || [], checksAhead: x.checksAhead || [], priorChecks: x.priorChecks || [], skipChecks: !!x.skipChecks };
+    checks: x.checks || [], checksAhead: x.checksAhead || [], priorChecks: x.priorChecks || [], skipChecks: !!x.skipChecks, reworded: x.reworded || [] };
 }
 function showLive(on) { $("ask-idle").hidden = on; $("ask-live").hidden = !on; }
 function begin(r) { run = r; $("ask-done").textContent = ""; showLive(true); next(); }
@@ -705,6 +732,7 @@ function earlierNow(w) {
 }
 function fillChoice(el, id, group) {
   el.textContent = nameOf(id);
+  if (run && run.reworded && run.reworded.includes(id)) { const m = document.createElement("span"); m.className = "reworded"; m.textContent = "Reworded since your last answer"; el.appendChild(m); }
   if (group && group.length > 1) {
     const also = document.createElement("span"); also.className = "also";
     also.textContent = "Together with what you called about the same:";
@@ -721,11 +749,11 @@ function next() {
   fillChoice($("ask-a"), w.q.a); fillChoice($("ask-b"), w.q.b, w.q.group);
   if (w.kind === "ask") {
     const placed = w.r.order.length;
-    $("ask-q").textContent = "Which matters more to you?";
+    $("ask-q").textContent = QUESTION;
     $("ask-progress").textContent = "Question " + (w.r.used.length + 1) + " of at most " + (w.r.used.length + w.r.remaining) +
       " · " + placed + "/" + startOrder.length + " placed";
   } else {
-    $("ask-q").textContent = "Check: which matters more to you?";
+    $("ask-q").textContent = "Check: " + QUESTION.charAt(0).toLowerCase() + QUESTION.slice(1);
     $("ask-progress").textContent = "Check " + (w.n + 1) + " of " + w.of + " · neighbours near the top, asked again · Stop skips the rest";
   }
   $("ask-back").disabled = run.ses.state.answers.length === 0 && run.checks.length === 0;
@@ -738,7 +766,7 @@ function next() {
   const note = $("ask-prior");
   note.hidden = was === undefined && !reviewing;
   note.textContent = was !== undefined
-    ? (reviewing ? "Reviewing. " : "") + "Last time you said: " + (was === "=" ? "about the same." : nameOf(was) + " matters more.")
+    ? (reviewing ? "Reviewing. " : "") + "Last time you said: " + (was === "=" ? "about the same." : nameOf(was) + " " + MORE + ".")
     : reviewing ? "Reviewing. This one is new, because an answer you changed led here." : "";
 }
 function give(preferred) {
@@ -755,7 +783,7 @@ function stepBack() {
 function finish() {
   const r = P.read(run.ses.state), checked = P.withChecks(run.ses.state, run.checks);
   order = r.order.slice(); ties = checked.ties; answers = r.used.slice(); checks = run.checks.slice();
-  run = null; saveLive(); showLive(false);
+  answeredNames = currentNames(); run = null; saveLive(); showLive(false);
   idle(); render();
 }
 // The finished screen: what the answers did, and the same bar shape as during the questions.
@@ -768,6 +796,13 @@ function idle() {
   $("ask-resume").hidden = !live;
   $("ask-start").textContent = done || live ? "Start over" : "Start the questions";
   $("ask-start").classList.toggle("primary", !done && !live);
+  const changed = reworded();
+  $("ask-changed").hidden = !changed.length;
+  if (changed.length) {
+    $("ask-changed-text").textContent = "The wording of " + (changed.length === 1 ? "1 criterion" : changed.length + " criteria") +
+      " changed after you gave these answers, so the order below may not match what you'd say now:";
+    $("ask-changed-list").innerHTML = changed.map(id => "<li>" + esc(id) + " " + esc(byId[id].name) + "</li>").join("");
+  }
 }
 function readLive() { try { const x = JSON.parse(localStorage.getItem(KEY + "-live") || "null"); return x && Array.isArray(x.answers) ? x : null; } catch (e) { return null; } }
 // Reopen a finished run one step back: the last check, or else the last question.
@@ -796,7 +831,10 @@ function readCopied(text) {
 const tooOld = "These answers don't match the questions this page asks, so the run came from an older version of the page. Use Review them one by one instead.";
 
 $("ask-start").addEventListener("click", () => begin(newRun()));
-$("ask-review").addEventListener("click", () => { if (answers.length) begin(newRun(answers, checks)); });
+function review() { if (!answers.length) return; const r = newRun(answers, checks); r.reworded = reworded(); begin(r); }
+$("ask-review").addEventListener("click", review);
+$("ask-changed-review").addEventListener("click", review);
+$("ask-changed-keep").addEventListener("click", () => { answeredNames = currentNames(); render(); idle(); });
 $("ask-resume").addEventListener("click", () => { const x = readLive(); if (x) begin(loadLive(x)); });
 $("ask-reopen").addEventListener("click", () => { if (answers.length) reopen(answers, checks); });
 $("ask-replay-review").addEventListener("click", () => { const x = readCopied($("ask-replay-text").value);

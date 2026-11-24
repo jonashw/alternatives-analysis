@@ -255,7 +255,7 @@ Organize criteria into layers:
 
 ##### Starter Criteria (adapt per story)
 
-Name each criterion by why it matters, not by the feature: the director ranks the name. See "Name the reason, not just the feature" in the [general variant](https://alternatives.jonashw.dev/general.md).
+Write each criterion as one plain sentence about what good looks like for the director, starting with its requirement number, and keep a short code beside it: the director ranks the sentence. See "Write each criterion as one plain sentence about what good looks like" in the [general variant](https://alternatives.jonashw.dev/general.md).
 
 | Criterion | Suggested weight | 1 means | 3 means | 5 means |
 |---|---|---|---|---|
