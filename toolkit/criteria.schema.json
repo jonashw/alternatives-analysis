@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://alternatives.jonashw.dev/toolkit/criteria.schema.json",
+  "title": "Criteria Ranker criteria set",
+  "description": "A criteria set for https://alternatives.jonashw.dev/toolkit/criteria-ranker.html, pasted into 'Try it with your own criteria' or carried in a link as #data=<base64url of this JSON>. Three shapes: a plain list (title + criteria), one decision (add alternatives and scores), or a parent with parts (add parts). See toolkit/README.md, 'Try it with your own criteria'.",
+  "type": "object",
+  "required": ["title", "criteria"],
+  "properties": {
+    "title": { "$ref": "#/$defs/text", "description": "The page heading, such as \"Rank what matters for the team chat tool\"." },
+    "key": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,39}$", "description": "Optional. Joined with a hash of the criteria ids to name where answers are saved in the viewer's browser." },
+    "question": { "$ref": "#/$defs/text", "description": "List only: the question on each pair. Default \"Which matters more to you?\"." },
+    "more": { "$ref": "#/$defs/text", "description": "List only: as in \"Last time you said: X matters more\". Default \"matters more\"." },
+    "noun": { "$ref": "#/$defs/text", "description": "List only: what the items are, plural. Default \"criteria\"." },
+    "criteria": {
+      "type": "array", "minItems": 2, "maxItems": 40,
+      "items": {
+        "type": "object", "required": ["id", "name"],
+        "properties": {
+          "id": { "$ref": "#/$defs/id", "description": "A short stable code, such as COST. The copied record lists answers by it (COST > EASE)." },
+          "name": { "$ref": "#/$defs/text", "description": "One plain sentence saying what good looks like, requirement number first: \"R2 Results reach the right person with no copy and paste\"." },
+          "note": { "$ref": "#/$defs/text", "description": "Optional. Shown under the criterion, for example where the analyst is unsure." },
+          "scores": { "$ref": "#/$defs/scores", "description": "One decision only: one score per alternative, in order, 0 to 5 (1 poor, 5 excellent)." },
+          "director": { "const": true, "description": "Optional. Scored on the page with one tap per option instead of by scores." }
+        },
+        "additionalProperties": false
+      }
+    },
+    "alternatives": {
+      "type": "array", "minItems": 2, "maxItems": 12, "items": { "$ref": "#/$defs/text" },
+      "description": "One decision: the options, each starting with a short code (\"A Hosted chat service\"). Every criterion then needs scores, unless it is a director criterion."
+    },
+    "draftWeights": {
+      "type": "object", "additionalProperties": { "type": "number", "minimum": 0 },
+      "description": "Optional, with alternatives or parts: the analyst's draft weights by criterion id, such as {\"COST\": 30}. The page says whether they pick the same winner."
+    },
+    "gates": {
+      "type": "array", "maxItems": 12, "items": { "$ref": "#/$defs/gate" },
+      "description": "Parent with parts only: pass or fail checks every part must meet."
+    },
+    "parts": {
+      "type": "array", "minItems": 1, "maxItems": 12,
+      "description": "A parent with parts: the criteria carry no scores; each part has its own options and scores.",
+      "items": {
+        "type": "object", "required": ["id", "name"],
+        "properties": {
+          "id": { "$ref": "#/$defs/id" },
+          "name": { "$ref": "#/$defs/text" },
+          "note": { "$ref": "#/$defs/text" },
+          "twoWay": { "const": true, "description": "Not scored: shown as \"two-way door: prototype it\"." },
+          "alternatives": { "type": "array", "minItems": 2, "maxItems": 12, "items": { "$ref": "#/$defs/text" } },
+          "scores": { "type": "object", "additionalProperties": { "$ref": "#/$defs/scores" }, "description": "By criterion id; a part uses only the criteria it scores." },
+          "gates": { "type": "object", "additionalProperties": { "$ref": "#/$defs/passes" }, "description": "By gate id: 1 pass, 0 fail, one per option." },
+          "ownGates": { "type": "array", "maxItems": 12, "items": { "$ref": "#/$defs/gate" } },
+          "ownGateResults": { "type": "object", "additionalProperties": { "$ref": "#/$defs/passes" } }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "not": { "required": ["alternatives", "parts"] },
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,15}$", "not": { "enum": ["constructor", "toString", "valueOf", "hasOwnProperty", "isPrototypeOf", "propertyIsEnumerable", "toLocaleString", "__proto__", "__defineGetter__", "__defineSetter__", "__lookupGetter__", "__lookupSetter__"] } },
+    "text": { "type": "string", "minLength": 1, "maxLength": 300 },
+    "scores": { "type": "array", "items": { "type": "number", "minimum": 0, "maximum": 5 } },
+    "passes": { "type": "array", "items": { "enum": [0, 1] } },
+    "gate": { "type": "object", "required": ["id", "name"], "properties": { "id": { "$ref": "#/$defs/id" }, "name": { "$ref": "#/$defs/text" } }, "additionalProperties": false }
+  }
+}
