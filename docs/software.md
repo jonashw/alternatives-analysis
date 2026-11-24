@@ -125,7 +125,11 @@ Organize criteria into layers:
 3. **Quality Attributes** — scalability, maintainability, security, interoperability, performance, reliability.
 4. **Operational Fit** — vendor lock-in risk, day-2 operations, observability, CI/CD compatibility.
 
-> **Name the reason, not just the feature.** A criterion's name should say why it matters, because the owner ranks the name. "Has an export button" invites a ranking of the button; "Data can leave with us if we switch (export)" ranks the reason. When a feature serves several needs, name them: "Every record is readable by software (screen readers, tests, other systems)", not "Works with screen readers".
+> **Write each criterion as one plain sentence about what good looks like.** The owner ranks the name, so the name must be clear without asking. Start with the requirement number it traces to, then say, in the owner's terms, what good looks like for them: "R2 Each result reaches the person who owns it, with no one forwarding it by hand", not "Targeted broadcast". Name the reason, not the feature: "Has an export button" invites a ranking of the button; "R5 Your data can leave with you if you switch" ranks the reason. When a feature serves several needs, name them. If the owner has to ask what a criterion means, rewrite it before they rank.
+>
+> **Keep a short code beside the sentence.** Give each criterion a short id (BACK, COST, ONCE) as well as its sentence. The copied record lists answers by id ("Set by 18 pairwise answers: BACK > ONCE, ..."), which keeps it short and easy to trace back to the matrix.
+>
+> **Rewording after answers.** If a criterion's wording changes after the owner has answered, the earlier answers were given to different words. Say so and offer a review of those answers rather than reusing them silently. The Criteria Ranker does this on its own.
 
 > When selecting criteria, ensure operational and non-functional obligations (observability, security, data migration, test strategy, day-2 ops) are represented as criteria rows rather than overlooked.
 

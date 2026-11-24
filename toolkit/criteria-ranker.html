@@ -90,6 +90,9 @@ summary{cursor:pointer;font-weight:500}
 #ask-progress{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin:0}
 /* The earlier answer, marked in review and after stepping back: a dashed outline plus words, never colour alone. */
 .prior-note{margin:0;font-weight:600;color:var(--ask)}
+.changed-note{margin:0;padding:10px 12px;border-radius:8px;background:var(--accent-soft);display:flex;flex-direction:column;gap:8px}
+.changed-note ul{margin:0;padding-left:1.2em}
+.ask button.choice .reworded{display:block;margin-top:4px;font-size:.82em;font-weight:600;color:var(--ask)}
 button.was{border:2px dashed var(--ask)}
 .ask button.choice.was::after{content:" (your earlier answer)";font-weight:600;color:var(--ask)}
 .ask-bar #ask-same.was::after{content:" (earlier)";color:var(--ask)}
@@ -128,6 +131,10 @@ button.was{border:2px dashed var(--ask)}
     <h2 id="h-ask">Answer questions instead of dragging</h2>
     <div id="ask-idle" class="ask">
       <p class="done-line" id="ask-done" role="status"></p>
+      <div class="changed-note" id="ask-changed" role="status" hidden>
+        <span id="ask-changed-text"></span><ul id="ask-changed-list"></ul>
+        <div class="row"><button id="ask-changed-review" class="primary" type="button">Review my answers</button><button id="ask-changed-keep" type="button">Keep my answers</button></div>
+      </div>
       <p class="small" id="ask-intro"></p>
       <div class="ask-bar idle-bar" role="toolbar" aria-label="Question controls">
         <button id="ask-reopen" class="icon" type="button" hidden aria-label="Back to the last question" title="Back to the last question"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
@@ -482,11 +489,15 @@ const DKEY = "director-scores-" + (D.key || "default");
 let ties = [];      // pairs [a, b] the owner called "about the same"; ties chain, so A = B and B = C put all three in one group
 let answers = [];   // the pairwise answers, kept as the record
 let checks = [];    // the check answers at the end, { a, b, preferred } with a placed higher
+// Each criterion's wording when the answers were given. If a name has changed since, the page says so and offers a review.
+const currentNames = () => Object.fromEntries(D.criteria.map(c => [c.id, c.name]));
+let answeredNames = currentNames();
 // The order, answers, ties and checks are saved together, so a reload keeps the record (it didn't before 2026-11-23).
 try { const s = JSON.parse(localStorage.getItem(KEY) || "null");
   if (Array.isArray(s) && s.length === startOrder.length && s.every(x => byId[x])) order = s;
   const r = JSON.parse(localStorage.getItem(KEY + "-record") || "null");
   if (r && Array.isArray(r.order) && r.order.join() === order.join()) { ties = r.ties || []; checks = r.checks || [];
+    if (r.names && typeof r.names === "object") answeredNames = { ...currentNames(), ...r.names };
     // Older copies saved answers as { a, b, ans: "a" | "b" | "same" }.
     answers = (r.answers || []).map(x => x.result ? x : x.ans === "same" ? { a: x.a, b: x.b, result: "=" } : x.ans === "a" ? { a: x.a, b: x.b, result: ">" } : { a: x.b, b: x.a, result: ">" }); }
   // An older hand-built page saved only { answers } under its own key, asked in the DATA order: replay them once.
@@ -552,7 +563,9 @@ function analyse(p, wById) {
 
 const list = document.getElementById("rank");
 const esc = s => String(s).replace(/[&<>"]/g, ch => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[ch]));
+function reworded() { return answers.length ? startOrder.filter(id => answeredNames[id] !== byId[id].name) : []; }
 function render() {
+  if (!answers.length) answeredNames = currentNames();
   const w = weights(order.length, curve());
   // Neighbours called "about the same" share the average of their positions' weights.
   for (let i = 0; i < order.length; ) {
@@ -643,7 +656,7 @@ function render() {
     (answers.length ? "\nSet by " + answers.length + " pairwise answers: " + answers.map(x => Pairwise.answerText(x)).join(", ") : "") +
     (checks.length ? "\nChecked at the end: " + checks.map(c => Pairwise.answerText(Pairwise.checkAnswer(c)) +
       (c.preferred === c.a ? "" : c.preferred === "=" ? " (now tied)" : " (reversed, now tied)")).join(", ") : "");
-  try { localStorage.setItem(KEY, JSON.stringify(order)); localStorage.setItem(KEY + "-record", JSON.stringify({ order, ties, answers, checks })); } catch (e) {}
+  try { localStorage.setItem(KEY, JSON.stringify(order)); localStorage.setItem(KEY + "-record", JSON.stringify({ order, ties, answers, checks, names: answeredNames })); } catch (e) {}
 }
 function failedGatesText(p) {
   return p.alternatives.map((alt, j) => [alt, failedGates(p, j)]).filter(x => x[1].length).map(x => x[0] + " (" + x[1].join(", ") + ")").join(", ");
@@ -702,11 +715,11 @@ function where() {
 }
 function saveLive() {
   try { localStorage.setItem(KEY + "-live", JSON.stringify(run ? { answers: run.ses.state.answers, ahead: run.ses.ahead, prior: run.ses.prior,
-    checks: run.checks, checksAhead: run.checksAhead, priorChecks: run.priorChecks, skipChecks: run.skipChecks } : null)); } catch (e) {}
+    checks: run.checks, checksAhead: run.checksAhead, priorChecks: run.priorChecks, skipChecks: run.skipChecks, reworded: run.reworded || [] } : null)); } catch (e) {}
 }
 function loadLive(x) {
   return { ses: { state: P.start(runIds, x.answers || []), ahead: x.ahead || [], prior: x.prior || [] },
-    checks: x.checks || [], checksAhead: x.checksAhead || [], priorChecks: x.priorChecks || [], skipChecks: !!x.skipChecks };
+    checks: x.checks || [], checksAhead: x.checksAhead || [], priorChecks: x.priorChecks || [], skipChecks: !!x.skipChecks, reworded: x.reworded || [] };
 }
 function showLive(on) { $("ask-idle").hidden = on; $("ask-live").hidden = !on; }
 function begin(r) { run = r; $("ask-done").textContent = ""; showLive(true); next(); }
@@ -719,6 +732,7 @@ function earlierNow(w) {
 }
 function fillChoice(el, id, group) {
   el.textContent = nameOf(id);
+  if (run && run.reworded && run.reworded.includes(id)) { const m = document.createElement("span"); m.className = "reworded"; m.textContent = "Reworded since your last answer"; el.appendChild(m); }
   if (group && group.length > 1) {
     const also = document.createElement("span"); also.className = "also";
     also.textContent = "Together with what you called about the same:";
@@ -769,7 +783,7 @@ function stepBack() {
 function finish() {
   const r = P.read(run.ses.state), checked = P.withChecks(run.ses.state, run.checks);
   order = r.order.slice(); ties = checked.ties; answers = r.used.slice(); checks = run.checks.slice();
-  run = null; saveLive(); showLive(false);
+  answeredNames = currentNames(); run = null; saveLive(); showLive(false);
   idle(); render();
 }
 // The finished screen: what the answers did, and the same bar shape as during the questions.
@@ -782,6 +796,13 @@ function idle() {
   $("ask-resume").hidden = !live;
   $("ask-start").textContent = done || live ? "Start over" : "Start the questions";
   $("ask-start").classList.toggle("primary", !done && !live);
+  const changed = reworded();
+  $("ask-changed").hidden = !changed.length;
+  if (changed.length) {
+    $("ask-changed-text").textContent = "The wording of " + (changed.length === 1 ? "1 criterion" : changed.length + " criteria") +
+      " changed after you gave these answers, so the order below may not match what you'd say now:";
+    $("ask-changed-list").innerHTML = changed.map(id => "<li>" + esc(id) + " " + esc(byId[id].name) + "</li>").join("");
+  }
 }
 function readLive() { try { const x = JSON.parse(localStorage.getItem(KEY + "-live") || "null"); return x && Array.isArray(x.answers) ? x : null; } catch (e) { return null; } }
 // Reopen a finished run one step back: the last check, or else the last question.
@@ -810,7 +831,10 @@ function readCopied(text) {
 const tooOld = "These answers don't match the questions this page asks, so the run came from an older version of the page. Use Review them one by one instead.";
 
 $("ask-start").addEventListener("click", () => begin(newRun()));
-$("ask-review").addEventListener("click", () => { if (answers.length) begin(newRun(answers, checks)); });
+function review() { if (!answers.length) return; const r = newRun(answers, checks); r.reworded = reworded(); begin(r); }
+$("ask-review").addEventListener("click", review);
+$("ask-changed-review").addEventListener("click", review);
+$("ask-changed-keep").addEventListener("click", () => { answeredNames = currentNames(); render(); idle(); });
 $("ask-resume").addEventListener("click", () => { const x = readLive(); if (x) begin(loadLive(x)); });
 $("ask-reopen").addEventListener("click", () => { if (answers.length) reopen(answers, checks); });
 $("ask-replay-review").addEventListener("click", () => { const x = readCopied($("ask-replay-text").value);
