@@ -275,7 +275,7 @@ Organize criteria into layers:
 
 ##### Starter Criteria (adapt per story)
 
-Write each criterion as one plain sentence about what good looks like for the director, starting with its requirement number, and keep a short code beside it: the director ranks the sentence. See "Write each criterion as one plain sentence about what good looks like" in the [general variant](https://alternatives.jonashw.dev/general.md).
+Write each criterion as one plain sentence about what good looks like for the director, starting with its requirement number, and keep a short code beside it: the director ranks the sentence. Write it in the director's voice ("I…"), or in the audience's when the director decides for them. When two criteria are linked, open each with the situation it covers ("When the scene is read aloud…", "When the scene is watched…"), so only one quality varies in each comparison, and check for overlapping pairs before the director ranks. See "Write each criterion as one plain sentence about what good looks like", "Write in the voice of whoever measures value", "Hold the situation constant" and "Check for overlap before the owner ranks" in the [general variant](https://alternatives.jonashw.dev/general.md).
 
 | Criterion | Suggested weight | 1 means | 3 means | 5 means |
 |---|---|---|---|---|

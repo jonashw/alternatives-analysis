@@ -46,7 +46,7 @@ The same shape as the page's `DATA` block, as JSON. The full rules are in [`crit
    Must-haves go in `gates`, not in `criteria`: each gate has `id`, `name` and `pass`, one `1` (pass) or `0` (fail) per alternative, for example `"gates":[{"id":"LEGAL","name":"R4 Meets the venue rules for groups","pass":[1,1,0]}]`. An alternative that fails a gate is shown as vetoed and left out of the scoring. Sort the requirements into gates and wants first (see the spec's "Requirements: Gates and Wants").
 3. **A parent with parts:** `criteria` without scores, optional `gates`, and `parts` (see "Parent and parts" below and `PARTS_EXAMPLE` in the page).
 
-Rules: `id` is 1 to 16 letters, digits, `-` or `_`, starting with a letter or digit, used once. Write each `name` as one plain sentence, requirement number first, saying what good looks like. Limits: 40 criteria, 12 alternatives, 12 parts, 300 characters per text, 40,000 characters in all. The page leaves out any other field, with a note.
+Rules: `id` is 1 to 16 letters, digits, `-` or `_`, starting with a letter or digit, used once. Write each `name` as one plain sentence, requirement number first, saying what good looks like. Write it in the voice of whoever measures value ("I can…", or "The org can…" when the owner decides for others). When two criteria are linked, open each with the situation it covers ("When saving works…", "When a site blocks saving…") so only one quality varies per question (see the spec's "Hold the situation constant"). Limits: 40 criteria, 12 alternatives, 12 parts, 300 characters per text, 40,000 characters in all. The page leaves out any other field, with a note.
 
 ### Making the link (for agents)
 
