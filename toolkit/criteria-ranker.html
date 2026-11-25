@@ -97,6 +97,21 @@ button.was{border:2px dashed var(--ask)}
 .ask button.choice.was::after{content:" (your earlier answer)";font-weight:600;color:var(--ask)}
 .ask-bar #ask-same.was::after{content:" (earlier)";color:var(--ask)}
 .tie{font-size:.78rem;color:var(--muted);margin-left:6px}
+/* "If you could only keep one": every member of the big tie as its own choice. */
+.ask .many{display:grid;grid-template-columns:minmax(0,1fr);gap:8px}
+@media (min-width:560px){.ask .many{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}}
+.ask .many button.choice{min-height:64px}
+.ask .many button.choice .num{color:var(--muted);font-variant-numeric:tabular-nums;margin-right:6px}
+.seg.wide span{padding:0 12px;white-space:nowrap}
+/* Pass or fail on a gate made from a tie: a switch, never a button. */
+.sw{display:inline-flex;align-items:center;gap:6px;cursor:pointer;white-space:nowrap}
+.sw input{appearance:none;-webkit-appearance:none;width:36px;height:20px;border-radius:10px;background:var(--line);position:relative;margin:0;cursor:pointer;flex:none}
+.sw input::after{content:"";position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:var(--panel);transition:left .15s}
+.sw input:checked{background:var(--accent)}
+.sw input:checked::after{left:18px}
+.gate-table td,.gate-table th{vertical-align:middle}
+#ask-gates-list .sw{white-space:normal;align-items:flex-start}
+.bigtie{border-left:3px solid var(--ask);padding:6px 10px;margin:0}
 [hidden]{display:none!important}
 .part{border-top:1px solid var(--line);padding-top:12px;display:flex;flex-direction:column;gap:10px}
 .part:first-of-type{border-top:0;padding-top:0}
@@ -163,6 +178,11 @@ a{color:var(--accent)}
         <div class="row"><button id="ask-changed-review" class="primary" type="button">Review my answers</button><button id="ask-changed-keep" type="button">Keep my answers</button></div>
       </div>
       <p class="small" id="ask-intro"></p>
+      <div class="row" id="keep-mode-box"><span class="small" id="keep-mode-label">Break up big ties:</span>
+        <div class="seg wide" role="radiogroup" aria-labelledby="keep-mode-label">
+          <label><input type="radio" name="keep-mode" id="keep-once" value="once"><span>Once per group</span></label>
+          <label><input type="radio" name="keep-mode" id="keep-floor" value="floor" checked><span>Until three are left</span></label>
+        </div></div>
       <div class="ask-bar idle-bar" role="toolbar" aria-label="Question controls">
         <button id="ask-reopen" class="icon" type="button" hidden aria-label="Back to the last question" title="Back to the last question"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
         <button id="ask-review" type="button" hidden title="Go through my answers one by one">Review answers</button>
@@ -183,8 +203,15 @@ a{color:var(--accent)}
         <button id="ask-same" type="button" title="About the same (=)">About the same <kbd>=</kbd></button>
         <button id="ask-keep" class="icon" type="button" aria-label="Forward: keep my earlier answer" title="Forward: keep my earlier answer (Right arrow or Enter)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
       </div>
-      <p class="q"><span id="ask-q"></span> <span class="small">(1 or 2)</span></p>
-      <div class="pair"><button class="choice" id="ask-a" type="button"></button><button class="choice" id="ask-b" type="button"></button></div>
+      <p class="q"><span id="ask-q"></span> <span class="small" id="ask-keys">(1 or 2)</span></p>
+      <div class="pair" id="ask-pair"><button class="choice" id="ask-a" type="button"></button><button class="choice" id="ask-b" type="button"></button></div>
+      <div class="many" id="ask-many" hidden></div>
+      <div class="row" id="ask-musts-row" hidden><button id="ask-musts" type="button">These are must-haves, not trade-offs</button></div>
+      <div class="changed-note" id="ask-gates" hidden>
+        <span>Tick the ones an option either meets or doesn't. They become gates: they lose their weight, and an option that fails one is vetoed. Each option passes where its score is 3 or more; you can switch any of them afterwards.</span>
+        <div id="ask-gates-list" style="display:flex;flex-direction:column;gap:6px"></div>
+        <div class="row"><button id="ask-gates-go" class="primary" type="button">Turn the ticked ones into gates</button><button id="ask-gates-cancel" type="button">Back to the question</button></div>
+      </div>
       <p class="prior-note" id="ask-prior" hidden></p>
     </div>
   </section>
@@ -207,8 +234,9 @@ a{color:var(--accent)}
     <div style="display:flex;flex-direction:column;gap:20px;min-width:0">
       <section class="panel" aria-labelledby="h-gates" id="gates-panel" hidden>
         <h2 id="h-gates">Gates every part must pass</h2>
-        <p class="small">Set once here and binding on every part. An option that fails any gate is vetoed: it stays visible but is not scored.</p>
+        <p class="small" id="gates-help">Set once here and binding on every part. An option that fails any gate is vetoed: it stays visible but is not scored.</p>
         <ul id="gates" style="margin:0;padding-left:1.2em"></ul>
+        <div id="tie-gates"></div>
       </section>
 
       <section class="panel" aria-labelledby="h-res" id="res-panel">
@@ -429,7 +457,83 @@ const parseAnswers = text => {
 /** A check answer ({ a, b, preferred }, a placed higher) as a plain answer: "A > B", "B > A" or "A = B". */
 const checkAnswer = c => c.preferred === '=' ? { a: c.a, b: c.b, result: '=' }
   : { a: c.preferred, b: c.preferred === c.a ? c.b : c.a, result: '>' };
-return { shuffle, start, read, answer, undo, worstCase, answerText, checkQuestions, withChecks, session, earlierFor, earlier, sessionAnswer, back, forward, parseAnswers, checkAnswer };
+
+// ---- Big ties: "If you could only keep one of these, which?" ----
+// After the questions and checks, a tie group with more than `limit` members (three by default) gets one more
+// question that names the whole group. A keep answer is { from: [the group], keep: id }: that item moves just above
+// the rest, which stay tied. { from, keep: '=' } means "I can't pick one": the group stays a tie and is not asked
+// again. { from, gates: [ids] } means those members are must-haves, not trade-offs: they leave the ranking (the
+// caller turns them into pass or fail gates) and the rest stay tied. With repeat on, the rest is asked again while
+// it still has more than `limit` members; with repeat off, each group is asked once.
+
+const sameSet = (x, y) => x.length === y.length && x.every(id => y.includes(id));
+
+/** Tie groups from an order and tie pairs: neighbours joined by a chain of ties share a group. Best first. */
+const groupsOf = (order, ties) => {
+  const parent = {};
+  const find = x => parent[x] === undefined || parent[x] === x ? x : (parent[x] = find(parent[x]));
+  for (const [a, b] of ties) { const ra = find(a), rb = find(b); if (ra !== rb) parent[ra] = rb; }
+  const groups = [];
+  order.forEach((id, i) => { if (i > 0 && find(order[i - 1]) === find(id)) groups[groups.length - 1].push(id); else groups.push([id]); });
+  return groups;
+};
+
+/** Tie pairs for a list of groups: each member tied to the next (a group of three gives two pairs). */
+const tiesOf = groups => groups.flatMap(g => g.slice(1).map((id, k) => [g[k], id]));
+
+/**
+ * Apply keep answers to tie groups, in order. Returns { groups, gated, used }: the new groups best first, the ids
+ * turned into gates, and the answers that applied (an answer whose group no longer exists is left out).
+ */
+const withKeeps = (groups, keeps) => {
+  let gs = groups.map(g => ({ ids: g.slice(), asked: false, settled: false }));
+  const gated = [], used = [];
+  for (const k of keeps) {
+    const i = gs.findIndex(g => sameSet(g.ids, k.from));
+    if (i < 0) continue;
+    if (k.gates) {
+      const out = k.gates.filter(id => gs[i].ids.includes(id));
+      if (!out.length) continue;
+      gated.push(...out);
+      const rest = gs[i].ids.filter(id => !out.includes(id));
+      gs.splice(i, 1, ...(rest.length ? [{ ids: rest, asked: true, settled: false }] : []));
+    } else if (k.keep === '=') { gs[i] = { ...gs[i], asked: true, settled: true }; }
+    else if (gs[i].ids.includes(k.keep)) {
+      gs.splice(i, 1, { ids: [k.keep], asked: true, settled: true }, { ids: gs[i].ids.filter(id => id !== k.keep), asked: true, settled: false });
+    } else continue;
+    used.push(k);
+  }
+  return { groups: gs.map(g => g.ids), gated, used, state: gs };
+};
+
+/** The next keep question, { from: [the group, in order] }, or null. Groups are asked best first. */
+const keepQuestion = (groups, keeps, { limit = 3, repeat = true } = {}) => {
+  const { state } = withKeeps(groups, keeps);
+  const g = state.find(x => x.ids.length > limit && !x.settled && (repeat || !x.asked));
+  return g ? { from: g.ids.slice() } : null;
+};
+
+/** The groups with more than `limit` members. */
+const bigTies = (groups, limit = 3) => groups.filter(g => g.length > limit);
+
+/** A keep answer as text: "MEDIA over CLAUDE+NOTE+TAP", "none of A+B+C+D", "gates TAP+PRIV of TAP+PRIV+A+B". */
+const keepText = k => k.gates ? 'gates ' + k.gates.join('+') + ' of ' + k.from.join('+')
+  : k.keep === '=' ? 'none of ' + k.from.join('+')
+  : k.keep + ' over ' + k.from.filter(id => id !== k.keep).join('+');
+
+/** Read keep answers back from text joined by "; ". Returns null if any part doesn't read. */
+const parseKeeps = text => {
+  const parts = text.split(';').map(x => x.trim()).filter(Boolean);
+  const ids = s => s.split('+').map(x => x.trim()).filter(Boolean);
+  const out = parts.map(x => {
+    let m = /^gates\s+(\S+)\s+of\s+(\S+)$/.exec(x); if (m) return { from: ids(m[2]), gates: ids(m[1]) };
+    m = /^none of\s+(\S+)$/.exec(x); if (m) return { from: ids(m[1]), keep: '=' };
+    m = /^(\S+)\s+over\s+(\S+)$/.exec(x); if (m) return { from: [m[1], ...ids(m[2])], keep: m[1] };
+    return null;
+  });
+  return out.some(x => !x) ? null : out;
+};
+return { shuffle, start, read, answer, undo, worstCase, answerText, checkQuestions, withChecks, session, earlierFor, earlier, sessionAnswer, back, forward, parseAnswers, checkAnswer, groupsOf, tiesOf, withKeeps, keepQuestion, bigTies, keepText, parseKeeps };
 })();
 // END pairwise.js
 // BEGIN custom.js (copied by toolkit/inline.mjs: edit custom.js, then run node toolkit/inline.mjs)
@@ -559,6 +663,9 @@ const check = json => {
       if (c.director) { delete c.scores; return; }
       c.scores = scoreList(c.scores, out.alternatives.length, 'criteria[' + i + '].scores (' + c.id + ')');
     });
+    // One decision: each gate carries its own results, one 1 (pass) or 0 (fail) per alternative.
+    if (json.gates !== undefined) out.gates = gateList(json.gates, 'gates').map((g, i) =>
+      ({ ...g, pass: passList(json.gates[i] && json.gates[i].pass, out.alternatives.length, 'gates[' + i + '].pass (' + g.id + ')') }));
   } else if (json.parts !== undefined) {
     out.criteria.forEach(c => delete c.scores);
     if (json.gates !== undefined) out.gates = gateList(json.gates, 'gates');
@@ -598,7 +705,7 @@ const check = json => {
     if (out.criteria.some(c => c.scores !== undefined)) warnings.push('Left out the scores: with no alternatives, the page ranks the criteria as a plain list.');
     out.criteria.forEach(c => delete c.scores);
   }
-  if (json.gates !== undefined && json.parts === undefined) warnings.push('Left out "gates": they only apply to a parent with parts.');
+  if (json.gates !== undefined && json.parts === undefined && json.alternatives === undefined) warnings.push('Left out "gates": they only apply when there are options to pass or fail.');
 
   if (json.draftWeights !== undefined && (out.alternatives || out.parts)) {
     const dw = json.draftWeights;
@@ -700,7 +807,8 @@ const D = CUSTOM || (new URLSearchParams(location.search).get("example") === "pa
 
 // Normalize both shapes into parts. A single decision is one unnamed part.
 const PARTS = D.parts ? D.parts : !(D.alternatives || []).length ? [] : [{ id: "", name: "", alternatives: D.alternatives,
-  scores: Object.fromEntries(D.criteria.filter(c => c.scores).map(c => [c.id, c.scores])), gates: {} }];
+  scores: Object.fromEntries(D.criteria.filter(c => c.scores).map(c => [c.id, c.scores])),
+  gates: Object.fromEntries((D.gates || []).filter(g => g.pass).map(g => [g.id, g.pass])) }];
 const MULTI = !!D.parts;
 const LIST = !D.parts && !(D.alternatives || []).length;
 const QUESTION = D.question || "Which matters more to you?", MORE = D.more || "matters more", NOUN = D.noun || "criteria";
@@ -727,6 +835,11 @@ const DKEY = "director-scores-" + SKEY;
 let ties = [];      // pairs [a, b] the owner called "about the same"; ties chain, so A = B and B = C put all three in one group
 let answers = [];   // the pairwise answers, kept as the record
 let checks = [];    // the check answers at the end, { a, b, preferred } with a placed higher
+let keeps = [];     // answers to "If you could only keep one of these, which?" for big ties (see pairwise.js, withKeeps)
+let keepModeUsed = "floor"; // the knob's setting when the keep answers were given, for the record
+let gated = [];     // criteria the owner called must-haves: they leave the ranking and become pass or fail gates
+let gateOver = {};  // the owner's switches on those gates, by part id, criterion id and option index (1 pass, 0 fail)
+const TIE_LIMIT = 3; // a tie group with more members than this gets the keep question
 // Each criterion's wording when the answers were given. If a name has changed since, the page says so and offers a review.
 const currentNames = () => Object.fromEntries(D.criteria.map(c => [c.id, c.name]));
 let answeredNames = currentNames();
@@ -735,6 +848,7 @@ try { const s = JSON.parse(localStorage.getItem(KEY) || "null");
   if (Array.isArray(s) && s.length === startOrder.length && s.every(x => byId[x])) order = s;
   const r = JSON.parse(localStorage.getItem(KEY + "-record") || "null");
   if (r && Array.isArray(r.order) && r.order.join() === order.join()) { ties = r.ties || []; checks = r.checks || [];
+    keeps = Array.isArray(r.keeps) ? r.keeps : []; keepModeUsed = r.keepMode === "once" ? "once" : "floor"; gated = Array.isArray(r.gated) ? r.gated.filter(id => byId[id]) : [];
     if (r.names && typeof r.names === "object") answeredNames = { ...currentNames(), ...r.names };
     // Older copies saved answers as { a, b, ans: "a" | "b" | "same" }.
     answers = (r.answers || []).map(x => x.result ? x : x.ans === "same" ? { a: x.a, b: x.b, result: "=" } : x.ans === "a" ? { a: x.a, b: x.b, result: ">" } : { a: x.b, b: x.a, result: ">" }); }
@@ -745,6 +859,14 @@ try { const s = JSON.parse(localStorage.getItem(KEY) || "null");
       if (got.done) { order = got.order.slice(); answers = got.used.slice(); ties = got.groups.flatMap(g => g.slice(1).map(x => [g[0], x])); } } } } catch (e) {}
 let director = {};  // director's scores, by part id, criterion id and alternative index
 try { director = JSON.parse(localStorage.getItem(DKEY) || "{}") || {}; } catch (e) { director = {}; }
+try { gateOver = JSON.parse(localStorage.getItem(KEY + "-gates") || "{}") || {}; } catch (e) { gateOver = {}; }
+// How far the keep question goes: "floor" asks again until three are left, "once" asks each big tie once.
+function keepMode() { return document.getElementById("keep-once").checked ? "once" : "floor"; }
+try { if (localStorage.getItem("criteria-ranker-keep-mode") === "once") document.getElementById("keep-once").checked = true; } catch (e) {}
+["keep-once", "keep-floor"].forEach(id => document.getElementById(id).addEventListener("change", () => {
+  try { localStorage.setItem("criteria-ranker-keep-mode", keepMode()); } catch (e) {} }));
+// The ranked criteria: everything except those turned into gates.
+function ranked() { return order.filter(id => !gated.includes(id)); }
 function tieRoot(id) { const parent = {}; const find = x => parent[x] === undefined || parent[x] === x ? x : (parent[x] = find(parent[x]));
   ties.forEach(([a, b]) => { const ra = find(a), rb = find(b); if (ra !== rb) parent[ra] = rb; }); return find(id); }
 function tied(a, b) { return tieRoot(a) === tieRoot(b); }
@@ -760,12 +882,26 @@ function weights(n, curve) {
 function curve() { return document.getElementById("curve-sum").checked ? "sum" : "roc"; }
 
 // The criteria a part is scored on: those it has scores for, plus every director criterion.
-function partCriteria(p) { return D.criteria.filter(c => c.director || (p.scores && p.scores[c.id])).map(c => c.id); }
+function partCriteria(p) { return D.criteria.filter(c => !gated.includes(c.id) && (c.director || (p.scores && p.scores[c.id]))).map(c => c.id); }
+// A criterion turned into a gate: an option passes where its score is 3 or more, unless the owner switched it.
+function rawScore(p, id, j) {
+  if (byId[id].director) { const v = ((director[p.id] || {})[id] || [])[j]; return v ? Number(v) : null; }
+  return p.scores && p.scores[id] ? p.scores[id][j] : null;
+}
+function tieGatePass(p, id, j) {
+  const o = ((gateOver[p.id] || {})[id] || [])[j];
+  if (o === 0 || o === 1) return o;
+  const v = rawScore(p, id, j); return v === null ? null : v >= 3 ? 1 : 0;
+}
+function tieGates(p) {
+  return gated.filter(id => byId[id].director || (p.scores && p.scores[id]))
+    .map(id => ({ g: { id, name: id }, r: p.alternatives.map((_, j) => tieGatePass(p, id, j)), tie: true }));
+}
 function score(p, id, j) {
   if (byId[id].director) { const v = ((director[p.id] || {})[id] || [])[j]; return v ? Number(v) : null; }
   return p.scores[id][j];
 }
-function partGates(p) { return GATES.map(g => ({ g, r: (p.gates || {})[g.id] })).concat((p.ownGates || []).map(g => ({ g, r: (p.ownGateResults || {})[g.id], own: true }))); }
+function partGates(p) { return GATES.map(g => ({ g, r: (p.gates || {})[g.id] })).concat((p.ownGates || []).map(g => ({ g, r: (p.ownGateResults || {})[g.id], own: true })), p.twoWay ? [] : tieGates(p)); }
 function failedGates(p, j) { return partGates(p).filter(x => x.r && x.r[j] === 0).map(x => x.g.name); }
 // Weighted total over the criteria this part uses that are scored; weights renormalized over those.
 function totals(p, wById) {
@@ -790,13 +926,32 @@ function analyse(p, wById) {
   const wins = p.alternatives.map(() => 0), N = 2000;
   if (alive.length > 1) for (let t = 0; t < N; t++) {
     const q = {}; let s = 0;
-    order.forEach(id => { q[id] = wById[id] * (0.8 + 0.4 * rnd()); s += q[id]; });
-    order.forEach(id => q[id] /= s);
+    ranked().forEach(id => { q[id] = wById[id] * (0.8 + 0.4 * rnd()); s += q[id]; });
+    ranked().forEach(id => q[id] /= s);
     const tv = totals(p, q); let b = alive[0]; alive.forEach(j => { if (tv[j] > tv[b]) b = j; }); wins[b]++;
+  }
+  // Order-consistent: random weights that keep the owner's order, tied criteria sharing the mean of their places.
+  const groups = Pairwise.groupsOf(ranked(), ties), ordered = p.alternatives.map(() => 0);
+  if (alive.length > 1) for (let t = 0; t < N; t++) {
+    const u = ranked().map(() => rnd()).sort((x, y) => y - x), q = {}; let k = 0;
+    groups.forEach(g => { let m = 0; for (let i = 0; i < g.length; i++) m += u[k + i]; m /= g.length; g.forEach(id => q[id] = m); k += g.length; });
+    const tv = totals(p, q); let b = alive[0]; alive.forEach(j => { if (tv[j] > tv[b]) b = j; }); ordered[b]++;
+  }
+  // A big tie at the top: how much of the gap between the top two sits on criteria the owner called about the same.
+  // Inside a tie the weights are equal, so there only the scores separate the options.
+  let bigTie = null;
+  const topGroup = groups.length ? groups[0].filter(id => partCriteria(p).includes(id)) : [];
+  if (second !== undefined && topGroup.length > TIE_LIMIT) {
+    const ids = partCriteria(p), wSum = ids.reduce((x, id) => x + (score(p, id, top) !== null ? wById[id] : 0), 0);
+    let inside = 0, all = 0;
+    ids.forEach(id => { const a = score(p, id, top), b = score(p, id, second); if (a === null || b === null) return;
+      const c = Math.abs(wById[id] * (a - b) / wSum); all += c; if (topGroup.includes(id)) inside += c; });
+    const eq = totals(p, Object.fromEntries(ids.map(id => [id, 1])));
+    bigTie = { size: topGroup.length, share: all ? inside / all : 0, equalLead: eq[top] - eq[second] };
   }
   const dw = Object.fromEntries(Object.entries(D.draftWeights || {}).map(([k, x]) => [k, x / 100]));
   const dv = totals(p, dw); let draftTop = alive[0]; alive.forEach(j => { if (dv[j] > dv[draftTop]) draftTop = j; });
-  return { v, alive, rankIdx, top, second, margin, wins, N, draftTop };
+  return { v, alive, rankIdx, top, second, margin, wins, ordered, N, draftTop, bigTie };
 }
 
 const list = document.getElementById("rank");
@@ -804,33 +959,48 @@ const esc = s => String(s).replace(/[&<>"]/g, ch => ({"&":"&amp;","<":"&lt;",">"
 function reworded() { return answers.length ? startOrder.filter(id => answeredNames[id] !== byId[id].name) : []; }
 function render() {
   if (!answers.length) answeredNames = currentNames();
-  const w = weights(order.length, curve());
+  const rk = ranked();
+  const w = weights(rk.length, curve());
   // Neighbours called "about the same" share the average of their positions' weights.
-  for (let i = 0; i < order.length; ) {
-    let j = i; while (j + 1 < order.length && tied(order[j], order[j + 1])) j++;
+  for (let i = 0; i < rk.length; ) {
+    let j = i; while (j + 1 < rk.length && tied(rk[j], rk[j + 1])) j++;
     if (j > i) { let m = 0; for (let k = i; k <= j; k++) m += w[k]; m /= (j - i + 1); for (let k = i; k <= j; k++) w[k] = m; }
     i = j + 1;
   }
-  const wById = {}; order.forEach((id, i) => wById[id] = w[i]);
+  const wById = {}; rk.forEach((id, i) => wById[id] = w[i]); gated.forEach(id => wById[id] = 0);
   const max = Math.max(...w);
   list.innerHTML = "";
-  order.forEach((id, i) => {
+  rk.forEach((id, i) => {
     const c = byId[id];
     const li = document.createElement("li"); li.className = "item"; li.dataset.id = id;
     li.innerHTML =
       '<span class="grip" aria-hidden="true">⠿</span>' +
-      '<div style="min-width:0"><div class="name"><span class="pos">' + (i + 1) + '</span> ' + esc(c.name) + ' <span class="small">(' + c.id + ')</span>' + (i > 0 && tied(order[i - 1], id) ? '<span class="tie">about the same as the one above</span>' : '') + '</div>' +
+      '<div style="min-width:0"><div class="name"><span class="pos">' + (i + 1) + '</span> ' + esc(c.name) + ' <span class="small">(' + c.id + ')</span>' + (i > 0 && tied(rk[i - 1], id) ? '<span class="tie">about the same as the one above</span>' : '') + '</div>' +
       (c.note ? '<div class="note">' + esc(c.note) + '</div>' : '') +
       (LIST ? '' : '<div class="meter"><i style="width:' + (100 * w[i] / max).toFixed(1) + '%"></i></div>') + '</div>' +
       '<div class="side">' + (LIST ? '' : '<span class="pct">' + (100 * w[i]).toFixed(1) + '%</span>') +
       '<button type="button" data-move="-1" aria-label="Move ' + esc(c.name) + ' up"' + (i === 0 ? ' disabled' : '') + '>▲</button>' +
-      '<button type="button" data-move="1" aria-label="Move ' + esc(c.name) + ' down"' + (i === order.length - 1 ? ' disabled' : '') + '>▼</button></div>';
+      '<button type="button" data-move="1" aria-label="Move ' + esc(c.name) + ' down"' + (i === rk.length - 1 ? ' disabled' : '') + '>▼</button></div>';
     list.appendChild(li);
   });
 
-  // Shared gates, shown once.
-  document.getElementById("gates-panel").hidden = !GATES.length;
+  // Shared gates, shown once, then any criteria the owner turned into gates, with a pass or fail switch per option.
+  document.getElementById("gates-panel").hidden = !GATES.length && !gated.length;
+  document.getElementById("h-gates").textContent = MULTI ? "Gates every part must pass" : "Gates every option must pass";
+  document.getElementById("gates-help").textContent = (MULTI ? "Set once here and binding on every part. " : "") +
+    "An option that fails any gate is vetoed: it stays visible but is not scored.";
   document.getElementById("gates").innerHTML = GATES.map(g => "<li>" + esc(g.name) + "</li>").join("");
+  document.getElementById("gates").hidden = !GATES.length;
+  document.getElementById("tie-gates").innerHTML = !gated.length ? "" :
+    '<p class="small" style="margin:0 0 6px">Turned into gates from your tie: ' + gated.map(id => esc(id)).join(", ") +
+    '. Each option passes where its score (shown after the dot) is 3 or more. Switch any you disagree with.</p>' +
+    PARTS.filter(p => !p.twoWay && tieGates(p).length).map(p => (MULTI ? "<strong>" + esc(p.name) + "</strong>" : "") +
+      '<div class="tablebox"><table class="gate-table"><tr><th>Option</th>' + tieGates(p).map(x => '<th>' + esc(x.g.id) + '</th>').join("") + '</tr>' +
+      p.alternatives.map((alt, j) => '<tr><td>' + esc(alt) + '</td>' + tieGates(p).map(x => {
+        const v = x.r[j], sc = rawScore(p, x.g.id, j);
+        return '<td>' + (v === null ? '<span class="small">no score</span>' : '<label class="sw"><input type="checkbox" role="switch" data-gpart="' + esc(p.id) + '" data-gcrit="' + x.g.id +
+          '" data-galt="' + j + '"' + (v ? ' checked' : '') + ' aria-label="' + esc(alt) + ' passes ' + esc(x.g.id) + '"><span>' + (v ? 'Pass' : 'Fail') +
+          ' <span class="small">· ' + sc + '</span></span></label>') + '</td>'; }).join("") + '</tr>').join("") + '</table></div>').join("");
 
   const results = document.getElementById("results"); results.innerHTML = "";
   const roll = [], textParts = [];
@@ -869,9 +1039,20 @@ function render() {
     });
     t += "</table>";
     const robust = a.alive.length > 1 ? "When every weight is varied by 20% either way, " + p.alternatives[a.top] + " still wins " +
-      Math.round(100 * a.wins[a.top] / a.N) + "% of 2,000 trials. " +
+      Math.round(100 * a.wins[a.top] / a.N) + "% of 2,000 trials. With random weights that keep your order (ties stay ties), it wins " +
+      Math.round(100 * a.ordered[a.top] / a.N) + "%. " +
       (!D.draftWeights ? "" : a.draftTop === a.top ? "The analyst's draft weights picked the same winner." : "The analyst's draft weights picked " + p.alternatives[a.draftTop] + " instead.") : "";
+    // A big tie at the top: say plainly that the scores, not the ranking, separate the leaders.
+    // Options usually start with a short code ("D HTTP Shortcuts"); the tie sentence uses it to stay readable.
+    const short = alt => { const c = String(alt).split(" ")[0]; return c.length <= 3 && c !== alt ? c : alt; };
+    const bt = a.bigTie, T = bt && short(p.alternatives[a.top]), S = bt && short(p.alternatives[a.second]);
+    const tieText = !bt ? "" : "Your top " + bt.size + " criteria are about the same, so they share one weight and only the scores separate the options on them. " +
+      (bt.equalLead >= 0 ? "With equal weights, " + T + " leads " + S + " by " + bt.equalLead.toFixed(2) : "With equal weights, " + S + " would lead " + T + " by " + (-bt.equalLead).toFixed(2)) +
+      "; with yours, " + T + " leads by " + a.margin.toFixed(2) + ". " + Math.round(100 * bt.share) + "% of what separates " + T + " and " + S +
+      " comes from criteria in that tie, so " + (bt.share >= 0.5 ? "the scores decide this more than your ranking does." : "your ranking still does most of the deciding.") +
+      (bt.share >= 0.5 ? " Answering \"If you could only keep one\" lets your judgement decide." : "");
     box.innerHTML = (MULTI ? "<h3>" + esc(p.name) + "</h3>" : "") + '<div class="verdict">' + verdict + '</div><div class="tablebox">' + t + '</div>' +
+      (tieText ? '<p class="small bigtie"><strong>Big tie.</strong> ' + esc(tieText) + '</p>' : '') +
       (robust ? '<p class="small">' + esc(robust) + '</p>' : '');
     results.appendChild(box);
     const status = !a.alive.length ? "All vetoed" : miss.length ? "Waiting on the director" : close ? "Tie: the director's call" : "Chosen";
@@ -880,7 +1061,10 @@ function render() {
     const dirText = dirIds.map(id => byId[id].id + " " + p.alternatives.map((alt, j) => alt + " " + (score(p, id, j) ?? "unscored")).join(", ")).join("; ");
     textParts.push((MULTI ? p.name + ": " : "Winner: ") + (a.alive.length ? p.alternatives[a.top] + " " + a.v[a.top].toFixed(2) : "none") +
       (a.second !== undefined ? ", then " + p.alternatives[a.second] + " " + a.v[a.second].toFixed(2) : "") +
-      (failedGatesText(p) ? ". Vetoed: " + failedGatesText(p) : "") + (dirText ? ". Director: " + dirText : ""));
+      (failedGatesText(p) ? ". Vetoed: " + failedGatesText(p) : "") + (dirText ? ". Director: " + dirText : "") +
+      (switchedText(p) ? ". Gates switched by hand: " + switchedText(p) : "") +
+      (bt ? ". Big tie: " + Math.round(100 * bt.share) + "% of the gap between " + T + " and " + S + " comes from the " + bt.size +
+        " tied criteria; with equal weights the lead is " + bt.equalLead.toFixed(2) : ""));
   });
 
   document.getElementById("roll-panel").hidden = !MULTI;
@@ -889,14 +1073,29 @@ function render() {
 
   document.getElementById("out").value =
     (LIST ? "My ranking:\n" : "My ranking (" + (curve() === "roc" ? "steep" : "gentle") + " weights):\n") +
-    order.map((id, i) => (i + 1) + ". " + id + " " + byId[id].name + (LIST ? "" : " (" + (100 * w[i]).toFixed(1) + "%)") + (i > 0 && tied(order[i - 1], id) ? " [about the same as the one above]" : "")).join("\n") +
+    rk.map((id, i) => (i + 1) + ". " + id + " " + byId[id].name + (LIST ? "" : " (" + (100 * w[i]).toFixed(1) + "%)") + (i > 0 && tied(rk[i - 1], id) ? " [about the same as the one above]" : "")).join("\n") +
+    (gated.length ? "\nTurned into gates (must-haves, no weight; pass at a score of 3 or more): " + gated.map(id => id + " " + byId[id].name).join("; ") : "") +
     (LIST ? "" : "\n" + (MULTI ? "Parts:\n" : "") + textParts.join("\n")) +
     (answers.length ? "\nSet by " + answers.length + " pairwise answers: " + answers.map(x => Pairwise.answerText(x)).join(", ") : "") +
     (checks.length ? "\nChecked at the end: " + checks.map(c => Pairwise.answerText(Pairwise.checkAnswer(c)) +
       (c.preferred === c.a ? "" : c.preferred === "=" ? " (now tied)" : " (reversed, now tied)")).join(", ") : "") +
+    (keeps.length ? "\nBig ties (" + (keepModeUsed === "once" ? "once per group" : "until three are left") + "): " + keeps.map(Pairwise.keepText).join("; ") : "") +
     (CUSTOM ? "\nCriteria set: " + shareLink() : "");
-  try { localStorage.setItem(KEY, JSON.stringify(order)); localStorage.setItem(KEY + "-record", JSON.stringify({ order, ties, answers, checks, names: answeredNames })); } catch (e) {}
+  try { localStorage.setItem(KEY, JSON.stringify(order)); localStorage.setItem(KEY + "-record", JSON.stringify({ order, ties, answers, checks, keeps, keepMode: keepModeUsed, gated, names: answeredNames })); } catch (e) {}
 }
+function switchedText(p) {
+  return tieGates(p).flatMap(x => p.alternatives.map((alt, j) => {
+    const o = ((gateOver[p.id] || {})[x.g.id] || [])[j], v = rawScore(p, x.g.id, j);
+    return (o === 0 || o === 1) && v !== null && o !== (v >= 3 ? 1 : 0) ? x.g.id + " " + alt + " " + (o ? "pass" : "fail") : null; })).filter(Boolean).join(", ");
+}
+document.getElementById("tie-gates").addEventListener("change", e => {
+  const s = e.target.closest("input[data-gcrit]"); if (!s) return;
+  const p = s.dataset.gpart, c = s.dataset.gcrit, j = Number(s.dataset.galt);
+  gateOver[p] = gateOver[p] || {}; gateOver[p][c] = gateOver[p][c] || []; gateOver[p][c][j] = s.checked ? 1 : 0;
+  try { localStorage.setItem(KEY + "-gates", JSON.stringify(gateOver)); } catch (err) {}
+  render();
+  const again = document.querySelector('input[data-gpart="' + p + '"][data-gcrit="' + c + '"][data-galt="' + j + '"]'); if (again) again.focus();
+});
 function failedGatesText(p) {
   return p.alternatives.map((alt, j) => [alt, failedGates(p, j)]).filter(x => x[1].length).map(x => x[0] + " (" + x[1].join(", ") + ")").join(", ");
 }
@@ -913,17 +1112,17 @@ list.addEventListener("click", e => {
   const b = e.target.closest("button[data-move]"); if (!b) return;
   const id = b.closest(".item").dataset.id, i = order.indexOf(id), j = i + Number(b.dataset.move);
   if (j < 0 || j >= order.length) return;
-  order.splice(i, 1); order.splice(j, 0, id); ties = []; answers = []; checks = []; idle(); render();
+  order.splice(i, 1); order.splice(j, 0, id); ties = []; answers = []; checks = []; keeps = []; gated = []; idle(); render();
   const again = list.querySelector('.item[data-id="' + id + '"] button[data-move="' + b.dataset.move + '"]');
   if (again && !again.disabled) again.focus();
 });
 if (window.Sortable) {
   Sortable.create(list, { handle: ".grip", animation: 150, onEnd: () => {
-    order = Array.from(list.children).map(li => li.dataset.id); ties = []; answers = []; checks = []; idle(); render(); } });
+    order = Array.from(list.children).map(li => li.dataset.id).concat(gated); ties = []; answers = []; checks = []; keeps = []; gated = []; idle(); render(); } });
 }
 document.getElementById("curve-roc").addEventListener("change", render);
 document.getElementById("curve-sum").addEventListener("change", render);
-document.getElementById("reset").addEventListener("click", () => { order = startOrder.slice(); ties = []; answers = []; checks = []; idle(); render(); });
+document.getElementById("reset").addEventListener("click", () => { order = startOrder.slice(); ties = []; answers = []; checks = []; keeps = []; gated = []; idle(); render(); });
 
 // Pairwise mode. The question rules live in pairwise.js (copied into this page above, with its tests in the toolkit).
 // A run is a session: { state: the answers so far, ahead: answers stepped back over, prior: a run under review }.
@@ -938,34 +1137,47 @@ const nameOf = id => byId[id].name;
 function introText() {
   return "You compare two " + NOUN + " at a time and the page sorts the list from your answers. It never asks a pair whose answer it can already work out, so " +
     startOrder.length + " " + NOUN + " take at most " + P.worstCase(startOrder.length) + " questions, fewer when you say \"About the same\". " +
-    "Then it asks up to " + CHECKS + " check questions near the top of the list, which you can skip. You can still drag afterwards.";
+    "Then it asks up to " + CHECKS + " check questions near the top of the list, which you can skip. If more than " + TIE_LIMIT +
+    " end up about the same, it asks which one you would keep. You can still drag afterwards.";
 }
-function newRun(prior, priorChecks) {
-  return { ses: P.session(runIds, { prior: prior || [] }), checks: [], checksAhead: [], priorChecks: priorChecks || [], skipChecks: false };
+function newRun(prior, priorChecks, priorKeeps) {
+  return { ses: P.session(runIds, { prior: prior || [] }), checks: [], checksAhead: [], priorChecks: priorChecks || [], skipChecks: false,
+    keeps: [], keepsAhead: [], priorKeeps: priorKeeps || [], skipKeeps: false };
 }
 function checkList() { return P.checkQuestions(run.ses.state, CHECKS); }
-// Where the run stands: a question, a check, or done.
+// The tie groups once the questions and checks are in, before any keep answers.
+function runGroups(r) { return P.groupsOf(r.order, P.withChecks(run.ses.state, run.checks).ties); }
+// Where the run stands: a question, a check, a keep question for a big tie, or done.
 function where() {
   const r = P.read(run.ses.state);
   if (r.question) return { kind: "ask", r, q: r.question };
   const list = checkList();
   if (!run.skipChecks && run.checks.length < list.length) return { kind: "check", r, q: list[run.checks.length], n: run.checks.length, of: list.length };
+  const kq = run.skipKeeps ? null : P.keepQuestion(runGroups(r), run.keeps, { limit: TIE_LIMIT, repeat: keepMode() === "floor" });
+  if (kq) return { kind: "keep", r, q: kq, n: run.keeps.length };
   return { kind: "done", r };
 }
 function saveLive() {
   try { localStorage.setItem(KEY + "-live", JSON.stringify(run ? { answers: run.ses.state.answers, ahead: run.ses.ahead, prior: run.ses.prior,
-    checks: run.checks, checksAhead: run.checksAhead, priorChecks: run.priorChecks, skipChecks: run.skipChecks, reworded: run.reworded || [] } : null)); } catch (e) {}
+    checks: run.checks, checksAhead: run.checksAhead, priorChecks: run.priorChecks, skipChecks: run.skipChecks,
+    keeps: run.keeps, keepsAhead: run.keepsAhead, priorKeeps: run.priorKeeps, skipKeeps: run.skipKeeps, reworded: run.reworded || [] } : null)); } catch (e) {}
 }
 function loadLive(x) {
   return { ses: { state: P.start(runIds, x.answers || []), ahead: x.ahead || [], prior: x.prior || [] },
-    checks: x.checks || [], checksAhead: x.checksAhead || [], priorChecks: x.priorChecks || [], skipChecks: !!x.skipChecks, reworded: x.reworded || [] };
+    checks: x.checks || [], checksAhead: x.checksAhead || [], priorChecks: x.priorChecks || [], skipChecks: !!x.skipChecks,
+    keeps: x.keeps || [], keepsAhead: x.keepsAhead || [], priorKeeps: x.priorKeeps || [], skipKeeps: !!x.skipKeeps, reworded: x.reworded || [] };
 }
 function showLive(on) { $("ask-idle").hidden = on; $("ask-live").hidden = !on; }
 function begin(r) { run = r; $("ask-done").textContent = ""; showLive(true); next(); }
 
-// The earlier answer for what is on screen: the preferred id or "=", or undefined.
+const sameGroup = (x, from) => x.from.length === from.length && x.from.every(id => from.includes(id));
+// The earlier answer for what is on screen: the preferred id or "=", { gates } for a keep question, or undefined.
 function earlierNow(w) {
   if (w.kind === "ask") return P.earlier(run.ses);
+  if (w.kind === "keep") {
+    const k = run.keepsAhead.find(x => sameGroup(x, w.q.from)) || run.priorKeeps.find(x => sameGroup(x, w.q.from));
+    return k ? (k.gates ? { gates: k.gates } : k.keep) : undefined;
+  }
   const c = run.checksAhead.find(x => pairOf(x, w.q.a, w.q.b)) || run.priorChecks.find(x => pairOf(x, w.q.a, w.q.b));
   return c ? c.preferred : undefined;
 }
@@ -980,55 +1192,101 @@ function fillChoice(el, id, group) {
     also.appendChild(ul); el.appendChild(also);
   }
 }
+// The keep question: every member of the big tie as its own choice, numbered for the keyboard.
+function fillMany(from, was) {
+  const box = $("ask-many"); box.innerHTML = "";
+  from.forEach((id, i) => {
+    const b = document.createElement("button"); b.type = "button"; b.className = "choice" + (was === id ? " was" : ""); b.dataset.keep = id;
+    if (i < 9) { const n = document.createElement("span"); n.className = "num"; n.textContent = (i + 1) + "."; b.appendChild(n); }
+    b.appendChild(document.createTextNode(nameOf(id)));
+    if (run && run.reworded && run.reworded.includes(id)) { const m = document.createElement("span"); m.className = "reworded"; m.textContent = "Reworded since your last answer"; b.appendChild(m); }
+    box.appendChild(b);
+  });
+}
+function showGatePicker(on) {
+  $("ask-gates").hidden = !on; $("ask-many").hidden = on; $("ask-musts-row").hidden = on || LIST;
+  if (!on) return;
+  const w = where(), was = earlierNow(w), list = $("ask-gates-list"); list.innerHTML = "";
+  w.q.from.forEach(id => {
+    const l = document.createElement("label"); l.className = "sw";
+    const i = document.createElement("input"); i.type = "checkbox"; i.setAttribute("role", "switch"); i.value = id;
+    i.checked = !!(was && was.gates && was.gates.includes(id));
+    const t = document.createElement("span"); t.textContent = id + " " + nameOf(id);
+    l.appendChild(i); l.appendChild(t); list.appendChild(l);
+  });
+}
 function next() {
   const w = where();
   saveLive();
   if (w.kind === "done") return finish();
-  const reviewing = run.ses.prior.length > 0 || run.priorChecks.length > 0;
-  fillChoice($("ask-a"), w.q.a); fillChoice($("ask-b"), w.q.b, w.q.group);
-  if (w.kind === "ask") {
-    const placed = w.r.order.length;
-    $("ask-q").textContent = QUESTION;
-    $("ask-progress").textContent = "Question " + (w.r.used.length + 1) + " of at most " + (w.r.used.length + w.r.remaining) +
-      " · " + placed + "/" + startOrder.length + " placed";
+  const reviewing = run.ses.prior.length > 0 || run.priorChecks.length > 0 || run.priorKeeps.length > 0;
+  const keep = w.kind === "keep", was = earlierNow(w);
+  $("ask-pair").hidden = keep; $("ask-many").hidden = !keep; $("ask-musts-row").hidden = !keep || LIST; $("ask-gates").hidden = true;
+  $("ask-same").innerHTML = keep ? "Can't pick one <kbd>=</kbd>" : "About the same <kbd>=</kbd>";
+  $("ask-same").title = keep ? "I can't pick one: keep them tied (=)" : "About the same (=)";
+  if (keep) {
+    fillMany(w.q.from, was);
+    $("ask-q").textContent = "If you could only keep one of these, which?";
+    $("ask-q").nextElementSibling.textContent = "(1 to " + Math.min(9, w.q.from.length) + ")";
+    $("ask-progress").textContent = "Big tie: " + w.q.from.length + " about the same · " + (keepMode() === "floor" ? "until three are left" : "once per group") + " · Stop skips the rest";
+    $("ask-musts").classList.toggle("was", !!(was && was.gates));
   } else {
-    $("ask-q").textContent = "Check: " + QUESTION.charAt(0).toLowerCase() + QUESTION.slice(1);
-    $("ask-progress").textContent = "Check " + (w.n + 1) + " of " + w.of + " · neighbours near the top, asked again · Stop skips the rest";
+    fillChoice($("ask-a"), w.q.a); fillChoice($("ask-b"), w.q.b, w.q.group);
+    $("ask-q").nextElementSibling.textContent = "(1 or 2)";
+    if (w.kind === "ask") {
+      const placed = w.r.order.length;
+      $("ask-q").textContent = QUESTION;
+      $("ask-progress").textContent = "Question " + (w.r.used.length + 1) + " of at most " + (w.r.used.length + w.r.remaining) +
+        " · " + placed + "/" + startOrder.length + " placed";
+    } else {
+      $("ask-q").textContent = "Check: " + QUESTION.charAt(0).toLowerCase() + QUESTION.slice(1);
+      $("ask-progress").textContent = "Check " + (w.n + 1) + " of " + w.of + " · neighbours near the top, asked again · Stop skips the rest";
+    }
+    $("ask-a").classList.toggle("was", was === w.q.a); $("ask-b").classList.toggle("was", was === w.q.b);
   }
-  $("ask-back").disabled = run.ses.state.answers.length === 0 && run.checks.length === 0;
-  const stopLabel = w.kind === "check" ? "Skip the rest of the checks (Esc)" : "Stop and keep the list as it was (Esc)";
+  $("ask-back").disabled = run.ses.state.answers.length === 0 && run.checks.length === 0 && run.keeps.length === 0;
+  const stopLabel = w.kind === "check" ? "Skip the rest of the checks (Esc)" : keep ? "Skip the rest of the big ties (Esc)" : "Stop and keep the list as it was (Esc)";
   $("ask-stop").title = stopLabel; $("ask-stop").setAttribute("aria-label", stopLabel.replace(" (Esc)", ""));
-  const was = earlierNow(w);
-  $("ask-a").classList.toggle("was", was === w.q.a); $("ask-b").classList.toggle("was", was === w.q.b);
   $("ask-same").classList.toggle("was", was === "=");
   $("ask-keep").disabled = was === undefined;
   const note = $("ask-prior");
   note.hidden = was === undefined && !reviewing;
+  const said = was === undefined ? "" : was === "=" ? (keep ? "you couldn't pick one." : "about the same.")
+    : was.gates ? "must-haves: " + was.gates.join(", ") + "." : nameOf(was) + (keep ? "." : " " + MORE + ".");
   note.textContent = was !== undefined
-    ? (reviewing ? "Reviewing. " : "") + "Last time you said: " + (was === "=" ? "about the same." : nameOf(was) + " " + MORE + ".")
+    ? (reviewing ? "Reviewing. " : "") + "Last time you said: " + said
     : reviewing ? "Reviewing. This one is new, because an answer you changed led here." : "";
 }
 function give(preferred) {
   const w = where();
   if (w.kind === "ask") run.ses = P.sessionAnswer(run.ses, preferred);
   else if (w.kind === "check") { run.checks = run.checks.concat([{ a: w.q.a, b: w.q.b, preferred }]); run.checksAhead = run.checksAhead.filter(x => !pairOf(x, w.q.a, w.q.b)); }
+  else if (w.kind === "keep") {
+    const k = preferred && preferred.gates ? { from: w.q.from, gates: preferred.gates } : { from: w.q.from, keep: preferred };
+    run.keeps = run.keeps.concat([k]); run.keepsAhead = run.keepsAhead.filter(x => !sameGroup(x, w.q.from));
+  }
   next();
 }
 function stepBack() {
-  if (run.checks.length) { run.checksAhead = [run.checks[run.checks.length - 1]].concat(run.checksAhead); run.checks = run.checks.slice(0, -1); }
+  if (run.keeps.length) { run.keepsAhead = [run.keeps[run.keeps.length - 1]].concat(run.keepsAhead); run.keeps = run.keeps.slice(0, -1); }
+  else if (run.checks.length) { run.checksAhead = [run.checks[run.checks.length - 1]].concat(run.checksAhead); run.checks = run.checks.slice(0, -1); }
   else run.ses = P.back(run.ses);
-  run.skipChecks = false; next();
+  run.skipChecks = false; run.skipKeeps = false; next();
 }
 function finish() {
   const r = P.read(run.ses.state), checked = P.withChecks(run.ses.state, run.checks);
-  order = r.order.slice(); ties = checked.ties; answers = r.used.slice(); checks = run.checks.slice();
+  const kept = P.withKeeps(P.groupsOf(r.order, checked.ties), run.keeps);
+  order = kept.groups.flat().concat(kept.gated); gated = kept.gated; ties = P.tiesOf(kept.groups);
+  answers = r.used.slice(); checks = run.checks.slice(); keeps = kept.used.slice(); keepModeUsed = keepMode();
   answeredNames = currentNames(); run = null; saveLive(); showLive(false);
   idle(); render();
 }
 // The finished screen: what the answers did, and the same bar shape as during the questions.
 function idle() {
   const done = answers.length > 0, live = readLive();
-  $("ask-done").textContent = done ? "Done: " + answers.length + " answers" + (checks.length ? " and " + checks.length + " checks" : "") +
+  $("ask-done").textContent = done ? "Done: " + answers.length + " answers" + (checks.length ? ", " + checks.length + " checks" : "") +
+    (keeps.length ? ", " + keeps.length + " big-tie " + (keeps.length === 1 ? "answer" : "answers") : "") +
+    (gated.length ? " and " + gated.length + " must-haves turned into gates" : "") +
     " set the order below. Check it, drag if needed, then copy it." : "";
   $("ask-intro").textContent = introText(); $("ask-intro").hidden = done;
   $("ask-reopen").hidden = !done; $("ask-review").hidden = !done;
@@ -1044,60 +1302,75 @@ function idle() {
   }
 }
 function readLive() { try { const x = JSON.parse(localStorage.getItem(KEY + "-live") || "null"); return x && Array.isArray(x.answers) ? x : null; } catch (e) { return null; } }
-// Reopen a finished run one step back: the last check, or else the last question.
-function reopen(ans, chk) {
-  const r = { ses: { state: P.start(runIds, ans), ahead: [], prior: [] }, checks: chk.slice(), checksAhead: [], priorChecks: [], skipChecks: false };
+// Reopen a finished run one step back: the last big-tie answer, else the last check, else the last question.
+function reopen(ans, chk, kps) {
+  const r = { ...newRun(), ses: { state: P.start(runIds, ans), ahead: [], prior: [] }, checks: chk.slice(), keeps: (kps || []).slice() };
   if (P.read(r.ses.state).used.length !== ans.length) return false;
   run = r; stepBackQuiet(); $("ask-done").textContent = ""; showLive(true); next(); return true;
 }
 function stepBackQuiet() {
-  if (run.checks.length) { run.checksAhead = [run.checks[run.checks.length - 1]]; run.checks = run.checks.slice(0, -1); }
+  if (run.keeps.length) { run.keepsAhead = [run.keeps[run.keeps.length - 1]]; run.keeps = run.keeps.slice(0, -1); }
+  else if (run.checks.length) { run.checksAhead = [run.checks[run.checks.length - 1]]; run.checks = run.checks.slice(0, -1); }
   else run.ses = P.back(run.ses);
 }
-// Copied text: "Set by N pairwise answers: R2 > R4, ..." and "Checked at the end: R5 > R1, ...".
+// Copied text: "Set by N pairwise answers: R2 > R4, ...", "Checked at the end: R5 > R1, ..." and "Big ties (...): A over B+C+D; ...".
 function readCopied(text) {
   const m = /pairwise answers:\s*(.+)/.exec(text); if (!m) return null;
   const ans = P.parseAnswers(m[1]); if (!ans) return null;
   const c = /Checked at the end:\s*(.+)/.exec(text);
   const chk = c ? P.parseAnswers(c[1].replace(/\s*\([^)]*\)/g, "")) : [];
   if (chk === null) return null;
+  const k = /Big ties \([^)]*\):\s*(.+)/.exec(text);
+  const kps = k ? P.parseKeeps(k[1]) : [];
+  if (kps === null) return null;
   // A check is stored with a placed higher: rebuild that from the finished order.
   const ord = P.read(P.start(runIds, ans)).order;
   const asCheck = x => { const hi = ord.indexOf(x.a) <= ord.indexOf(x.b) ? x.a : x.b, lo = hi === x.a ? x.b : x.a;
     return { a: hi, b: lo, preferred: x.result === "=" ? "=" : x.a }; };
-  return { ans, chk: chk.map(asCheck) };
+  return { ans, chk: chk.map(asCheck), kps };
 }
 const tooOld = "These answers don't match the questions this page asks, so the run came from an older version of the page. Use Review them one by one instead.";
 
 $("ask-start").addEventListener("click", () => begin(newRun()));
-function review() { if (!answers.length) return; const r = newRun(answers, checks); r.reworded = reworded(); begin(r); }
+function review() { if (!answers.length) return; const r = newRun(answers, checks, keeps); r.reworded = reworded(); begin(r); }
 $("ask-review").addEventListener("click", review);
 $("ask-changed-review").addEventListener("click", review);
 $("ask-changed-keep").addEventListener("click", () => { answeredNames = currentNames(); render(); idle(); });
 $("ask-resume").addEventListener("click", () => { const x = readLive(); if (x) begin(loadLive(x)); });
-$("ask-reopen").addEventListener("click", () => { if (answers.length) reopen(answers, checks); });
+$("ask-reopen").addEventListener("click", () => { if (answers.length) reopen(answers, checks, keeps); });
 $("ask-replay-review").addEventListener("click", () => { const x = readCopied($("ask-replay-text").value);
   if (!x) { $("ask-replay-msg").textContent = "I couldn't read the answers line (it starts \"Set by\")."; return; }
-  $("ask-replay-msg").textContent = ""; begin(newRun(x.ans, x.chk)); });
+  $("ask-replay-msg").textContent = ""; begin(newRun(x.ans, x.chk, x.kps)); });
 $("ask-replay-go").addEventListener("click", () => { const x = readCopied($("ask-replay-text").value);
   if (!x) { $("ask-replay-msg").textContent = "I couldn't read the answers line (it starts \"Set by\")."; return; }
-  $("ask-replay-msg").textContent = reopen(x.ans, x.chk) ? "" : tooOld; });
+  $("ask-replay-msg").textContent = reopen(x.ans, x.chk, x.kps) ? "" : tooOld; });
 $("ask-a").addEventListener("click", () => give(where().q.a));
 $("ask-b").addEventListener("click", () => give(where().q.b));
+$("ask-many").addEventListener("click", e => { const b = e.target.closest("button[data-keep]"); if (b && run) give(b.dataset.keep); });
+$("ask-musts").addEventListener("click", () => { if (run) showGatePicker(true); });
+$("ask-gates-cancel").addEventListener("click", () => showGatePicker(false));
+$("ask-gates-go").addEventListener("click", () => {
+  const ids = Array.from($("ask-gates-list").querySelectorAll("input:checked")).map(i => i.value);
+  if (!ids.length) return showGatePicker(false);
+  give({ gates: ids });
+});
 $("ask-same").addEventListener("click", () => give("="));
 $("ask-keep").addEventListener("click", () => { const was = earlierNow(where()); if (was !== undefined) give(was); });
 $("ask-back").addEventListener("click", () => { if (run) stepBack(); });
 $("ask-stop").addEventListener("click", () => {
   if (!run) return;
-  if (where().kind === "check") { run.skipChecks = true; return next(); }   // during the checks, Stop skips the rest
+  const k = where().kind;
+  if (k === "check") { run.skipChecks = true; return next(); }   // during the checks, Stop skips the rest
+  if (k === "keep") { run.skipKeeps = true; return next(); }     // and during the big ties too
   run = null; saveLive(); showLive(false); idle();
 });
 document.addEventListener("keydown", e => {
-  if (!run || $("ask-live").hidden || e.metaKey || e.ctrlKey || e.altKey || /INPUT|TEXTAREA/.test(document.activeElement.tagName)) return;
+  if (!run || $("ask-live").hidden || !$("ask-gates").hidden || e.metaKey || e.ctrlKey || e.altKey || /INPUT|TEXTAREA/.test(document.activeElement.tagName)) return;
   const k = e.key, click = id => { const b = $(id); if (!b.hidden && !b.disabled) { e.preventDefault(); b.click(); } };
+  if (!$("ask-many").hidden && /^[1-9]$/.test(k)) { const b = $("ask-many").children[Number(k) - 1]; if (b) { e.preventDefault(); b.click(); } return; }
   if (k === "1") click("ask-a"); else if (k === "2") click("ask-b"); else if (k === "=") click("ask-same");
   else if (k === "ArrowLeft") click("ask-back"); else if (k === "Escape") click("ask-stop");
-  else if (k === "ArrowRight" || (k === "Enter" && !document.activeElement.closest(".ask-bar, .pair"))) click("ask-keep");
+  else if (k === "ArrowRight" || (k === "Enter" && !document.activeElement.closest(".ask-bar, .pair, .many"))) click("ask-keep");
 });
 // After a tap or click, drop focus so the button does not look chosen on the next question.
 // A keyboard press (detail 0) keeps focus, so keyboard users keep their place.

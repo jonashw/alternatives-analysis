@@ -184,3 +184,79 @@ export const parseAnswers = text => {
 /** A check answer ({ a, b, preferred }, a placed higher) as a plain answer: "A > B", "B > A" or "A = B". */
 export const checkAnswer = c => c.preferred === '=' ? { a: c.a, b: c.b, result: '=' }
   : { a: c.preferred, b: c.preferred === c.a ? c.b : c.a, result: '>' };
+
+// ---- Big ties: "If you could only keep one of these, which?" ----
+// After the questions and checks, a tie group with more than `limit` members (three by default) gets one more
+// question that names the whole group. A keep answer is { from: [the group], keep: id }: that item moves just above
+// the rest, which stay tied. { from, keep: '=' } means "I can't pick one": the group stays a tie and is not asked
+// again. { from, gates: [ids] } means those members are must-haves, not trade-offs: they leave the ranking (the
+// caller turns them into pass or fail gates) and the rest stay tied. With repeat on, the rest is asked again while
+// it still has more than `limit` members; with repeat off, each group is asked once.
+
+const sameSet = (x, y) => x.length === y.length && x.every(id => y.includes(id));
+
+/** Tie groups from an order and tie pairs: neighbours joined by a chain of ties share a group. Best first. */
+export const groupsOf = (order, ties) => {
+  const parent = {};
+  const find = x => parent[x] === undefined || parent[x] === x ? x : (parent[x] = find(parent[x]));
+  for (const [a, b] of ties) { const ra = find(a), rb = find(b); if (ra !== rb) parent[ra] = rb; }
+  const groups = [];
+  order.forEach((id, i) => { if (i > 0 && find(order[i - 1]) === find(id)) groups[groups.length - 1].push(id); else groups.push([id]); });
+  return groups;
+};
+
+/** Tie pairs for a list of groups: each member tied to the next (a group of three gives two pairs). */
+export const tiesOf = groups => groups.flatMap(g => g.slice(1).map((id, k) => [g[k], id]));
+
+/**
+ * Apply keep answers to tie groups, in order. Returns { groups, gated, used }: the new groups best first, the ids
+ * turned into gates, and the answers that applied (an answer whose group no longer exists is left out).
+ */
+export const withKeeps = (groups, keeps) => {
+  let gs = groups.map(g => ({ ids: g.slice(), asked: false, settled: false }));
+  const gated = [], used = [];
+  for (const k of keeps) {
+    const i = gs.findIndex(g => sameSet(g.ids, k.from));
+    if (i < 0) continue;
+    if (k.gates) {
+      const out = k.gates.filter(id => gs[i].ids.includes(id));
+      if (!out.length) continue;
+      gated.push(...out);
+      const rest = gs[i].ids.filter(id => !out.includes(id));
+      gs.splice(i, 1, ...(rest.length ? [{ ids: rest, asked: true, settled: false }] : []));
+    } else if (k.keep === '=') { gs[i] = { ...gs[i], asked: true, settled: true }; }
+    else if (gs[i].ids.includes(k.keep)) {
+      gs.splice(i, 1, { ids: [k.keep], asked: true, settled: true }, { ids: gs[i].ids.filter(id => id !== k.keep), asked: true, settled: false });
+    } else continue;
+    used.push(k);
+  }
+  return { groups: gs.map(g => g.ids), gated, used, state: gs };
+};
+
+/** The next keep question, { from: [the group, in order] }, or null. Groups are asked best first. */
+export const keepQuestion = (groups, keeps, { limit = 3, repeat = true } = {}) => {
+  const { state } = withKeeps(groups, keeps);
+  const g = state.find(x => x.ids.length > limit && !x.settled && (repeat || !x.asked));
+  return g ? { from: g.ids.slice() } : null;
+};
+
+/** The groups with more than `limit` members. */
+export const bigTies = (groups, limit = 3) => groups.filter(g => g.length > limit);
+
+/** A keep answer as text: "MEDIA over CLAUDE+NOTE+TAP", "none of A+B+C+D", "gates TAP+PRIV of TAP+PRIV+A+B". */
+export const keepText = k => k.gates ? 'gates ' + k.gates.join('+') + ' of ' + k.from.join('+')
+  : k.keep === '=' ? 'none of ' + k.from.join('+')
+  : k.keep + ' over ' + k.from.filter(id => id !== k.keep).join('+');
+
+/** Read keep answers back from text joined by "; ". Returns null if any part doesn't read. */
+export const parseKeeps = text => {
+  const parts = text.split(';').map(x => x.trim()).filter(Boolean);
+  const ids = s => s.split('+').map(x => x.trim()).filter(Boolean);
+  const out = parts.map(x => {
+    let m = /^gates\s+(\S+)\s+of\s+(\S+)$/.exec(x); if (m) return { from: ids(m[2]), gates: ids(m[1]) };
+    m = /^none of\s+(\S+)$/.exec(x); if (m) return { from: ids(m[1]), keep: '=' };
+    m = /^(\S+)\s+over\s+(\S+)$/.exec(x); if (m) return { from: [m[1], ...ids(m[2])], keep: m[1] };
+    return null;
+  });
+  return out.some(x => !x) ? null : out;
+};

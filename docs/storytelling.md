@@ -30,6 +30,7 @@ Each story AA document must include:
 6. A list of **departures from reality**, when the story shows real things (see Departures from Reality).
 7. A final decision with clear justification.
 8. A log of every **vetoed** option and the gate that stopped it.
+9. The story's requirements sorted into **gates** (must-haves) and **wants** (trade-offs) with the director, before any scoring. Only wants become weighted criteria.
 
 ---
 
@@ -185,9 +186,26 @@ Effort replaces cost. Measure it as **time to a proof of concept**, meaning how 
 
 ### Analysis
 
+#### Requirements: Gates and Wants
+
+Confirm the requirements with the director before naming any criteria. Then sort each one with the director:
+
+- **Gate (must-have).** An option that falls short is out, however well it does elsewhere. Gates are pass or fail and carry no weight.
+- **Want (trade-off).** The director would give up some of it to get more of another. Only wants become criteria in the matrix.
+
+To sort one, ask: "If an option did everything else well but fell short on this, would you still consider it?" "No" makes it a gate. "Yes, but I'd mind" makes it a want. A requirement can be both: a floor that is a gate ("nothing frightening for the youngest viewers") and more above the floor that is a want ("the gentler, the better"). Write the floor as the gate and the rest as the criterion.
+
+Keep the requirement number on both, so every gate and criterion traces back to it. Record the sorting:
+
+| # | Requirement | Gate or want | Why (the director's words) |
+|---|---|---|---|
+| *R1* | *One tap saves it* | *Want* | *"I'd still use it with two taps, but I'd mind"* |
+
+**Signs a requirement was sorted wrong:** the director calls more than three criteria "about the same" at the top of the ranking (see Big ties under Weight Elicitation), or most options score at the floor on one criterion. Sort it again with the director and re-run the gates.
+
 #### Viability Gates
 
-Gates are must-haves. Apply them **before** scoring. An option that fails a gate is **vetoed**: it is not scored, but it **must** be logged with the reason.
+Gates are must-haves (see Requirements: Gates and Wants). Apply them **before** scoring. An option that fails a gate is **vetoed**: it is not scored, but it **must** be logged with the reason.
 
 | Option | Gate failed | Why (explained clearly) |
 |---|---|---|
@@ -206,6 +224,8 @@ Suggested gates (adapt per story):
 $$V_j = G_j \sum_{i=1}^{n} W_i S_{ij}, \qquad G_j = \prod_{g} \mathbb{1}[\text{gate } g \text{ passed}]$$
 
 The vetoed option stays visible in the matrix, which is the log. Robustness analysis runs on the options that passed. Use either mode, but record which one you used.
+
+**A gate made from a scored criterion** (for example, one the director named a must-have during the ranking) passes where the option scores 3 or more on the 1 to 5 scale, unless the director says otherwise. Record every case the director switched.
 
 #### Option Rules
 
@@ -281,7 +301,7 @@ Write each criterion as one plain sentence about what good looks like for the di
 
 ##### Weight Elicitation
 
-The director sets the weights, not the analyst. Use the [Weight Elicitation](https://alternatives.jonashw.dev/general.md) method from the general variant: the director answers "Which matters more to you?" one pair at a time (one of the two, or "about the same"), the criteria are sorted by binary insertion, and the order becomes weights by rank-order centroid (steep) or rank-sum (gentle). The director's ranking and the full list of answers are the weights of record. A reusable page for this is the [Criteria Ranker](https://alternatives.jonashw.dev/toolkit/criteria-ranker.html).
+The director sets the weights, not the analyst. Use the [Weight Elicitation](https://alternatives.jonashw.dev/general.md) method from the general variant: the director answers "Which matters more to you?" one pair at a time (one of the two, or "about the same"), the criteria are sorted by binary insertion, and the order becomes weights by rank-order centroid (steep) or rank-sum (gentle). When more than three criteria end up "about the same", the same method asks the big-tie question ("If you could only keep one of these, which?"), and criteria the director calls must-haves there become gates. The director's ranking and the full list of answers are the weights of record. A reusable page for this is the [Criteria Ranker](https://alternatives.jonashw.dev/toolkit/criteria-ranker.html).
 
 ##### Robustness
 
@@ -307,7 +327,11 @@ The criterion with the smallest feasible $|\delta_k|$ is the **most critical cri
 
 6. **Order-consistent simulation.** Once the director has ranked the criteria, sample at least 10,000 random weight vectors that keep that order (sort uniform draws, normalize), and report win probabilities. Also swap each pair of neighbours in the ranking and report any swap that changes the winner.
 
-7. **Name the hinge.** State in one sentence what the choice actually depends on (a weight, a score, or neither), and put that question to the director.
+7. **Big-tie check.** Required when more than three criteria tie at the top. Tied criteria share one weight, so on those rows only the scores separate the options, and an order-consistent simulation looks more certain than it is. Report the lead of the top two under equal weights next to the lead under the director's weights, and the share of the gap between them that comes from criteria inside the tie $T$:
+$$\text{share}_T = \frac{\sum_{k \in T} |W_k d_k|}{\sum_k |W_k d_k|}, \qquad d_k = S_{k,(1)} - S_{k,(2)}$$
+When more than half the gap comes from the tie, say that the scores decide the result more than the ranking does, and offer the big-tie question (see Weight Elicitation).
+
+8. **Name the hinge.** State in one sentence what the choice actually depends on (a weight, a score, or neither), and put that question to the director.
 
 ### But / Therefore
 

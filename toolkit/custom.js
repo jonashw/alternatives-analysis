@@ -123,6 +123,9 @@ export const check = json => {
       if (c.director) { delete c.scores; return; }
       c.scores = scoreList(c.scores, out.alternatives.length, 'criteria[' + i + '].scores (' + c.id + ')');
     });
+    // One decision: each gate carries its own results, one 1 (pass) or 0 (fail) per alternative.
+    if (json.gates !== undefined) out.gates = gateList(json.gates, 'gates').map((g, i) =>
+      ({ ...g, pass: passList(json.gates[i] && json.gates[i].pass, out.alternatives.length, 'gates[' + i + '].pass (' + g.id + ')') }));
   } else if (json.parts !== undefined) {
     out.criteria.forEach(c => delete c.scores);
     if (json.gates !== undefined) out.gates = gateList(json.gates, 'gates');
@@ -162,7 +165,7 @@ export const check = json => {
     if (out.criteria.some(c => c.scores !== undefined)) warnings.push('Left out the scores: with no alternatives, the page ranks the criteria as a plain list.');
     out.criteria.forEach(c => delete c.scores);
   }
-  if (json.gates !== undefined && json.parts === undefined) warnings.push('Left out "gates": they only apply to a parent with parts.');
+  if (json.gates !== undefined && json.parts === undefined && json.alternatives === undefined) warnings.push('Left out "gates": they only apply when there are options to pass or fail.');
 
   if (json.draftWeights !== undefined && (out.alternatives || out.parts)) {
     const dw = json.draftWeights;

@@ -119,3 +119,12 @@ test('the JSON Schema accepts the sample and names the same limits', async () =>
   assert.equal(schema.$defs.text.maxLength, LIMITS.text);
   for (const k of Object.keys(SAMPLE)) assert.ok(k in schema.properties, k);
 });
+
+test('one decision can carry gates with a result per alternative', () => {
+  const base = { title: 't', alternatives: ['x', 'y'], criteria: [{ id: 'A', name: 'a', scores: [1, 2] }, { id: 'B', name: 'b', scores: [3, 4] }] };
+  const ok = check({ ...base, gates: [{ id: 'LEGAL', name: 'Meets the law', pass: [1, 0] }] });
+  assert.deepEqual(ok.errors, []);
+  assert.deepEqual(ok.data.gates, [{ id: 'LEGAL', name: 'Meets the law', pass: [1, 0] }]);
+  assert.ok(check({ ...base, gates: [{ id: 'LEGAL', name: 'x', pass: [1] }] }).errors[0].includes('gates[0].pass'));
+  assert.ok(check({ title: 't', criteria: base.criteria.map(({ scores, ...c }) => c), gates: [{ id: 'G', name: 'g' }] }).warnings.some(w => w.includes('"gates"')));
+});

@@ -35,7 +35,7 @@
     },
     "gates": {
       "type": "array", "maxItems": 12, "items": { "$ref": "#/$defs/gate" },
-      "description": "Parent with parts only: pass or fail checks every part must meet."
+      "description": "Pass or fail checks (viability gates). One decision: each gate also has pass, one 1 or 0 per alternative. Parent with parts: id and name here, results in each part's gates."
     },
     "parts": {
       "type": "array", "minItems": 1, "maxItems": 12,
@@ -63,6 +63,6 @@
     "text": { "type": "string", "minLength": 1, "maxLength": 300 },
     "scores": { "type": "array", "items": { "type": "number", "minimum": 0, "maximum": 5 } },
     "passes": { "type": "array", "items": { "enum": [0, 1] } },
-    "gate": { "type": "object", "required": ["id", "name"], "properties": { "id": { "$ref": "#/$defs/id" }, "name": { "$ref": "#/$defs/text" } }, "additionalProperties": false }
+    "gate": { "type": "object", "required": ["id", "name"], "properties": { "id": { "$ref": "#/$defs/id" }, "name": { "$ref": "#/$defs/text" }, "pass": { "$ref": "#/$defs/passes", "description": "One decision only: 1 pass, 0 fail, one per alternative, in order." } }, "additionalProperties": false }
   }
 }

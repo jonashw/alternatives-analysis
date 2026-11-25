@@ -183,3 +183,76 @@ test('upgrading a ranker keeps its decision and takes the new page', async () =>
   assert.ok(!page.includes('example-chat-tool'));
   assert.throws(() => upgrade('<title>x</title>', template));
 });
+
+// ---- Big ties ----
+import { bigTies, groupsOf, keepQuestion, keepText, parseKeeps, tiesOf, withKeeps } from './pairwise.js';
+
+// The inspiration-capture case (2026-11-24): seven criteria about the same at the top.
+const SEVEN = ['MEDIA', 'CLAUDE', 'NOTE', 'TAP', 'PRIV', 'FALL', 'META'];
+const CASE = [SEVEN, ['EXIT'], ['UPKEEP', 'COST']];
+
+test('groups come back from an order and its ties, including chained check ties', () => {
+  const order = ['a', 'b', 'c', 'd', 'e'];
+  assert.deepEqual(groupsOf(order, [['a', 'b'], ['c', 'b']]), [['a', 'b', 'c'], ['d'], ['e']]);
+  assert.deepEqual(groupsOf(order, []), [['a'], ['b'], ['c'], ['d'], ['e']]);
+  assert.deepEqual(tiesOf([['a', 'b', 'c'], ['d']]), [['a', 'b'], ['b', 'c']]);
+});
+
+test('a group of more than three gets a keep question; three or fewer do not', () => {
+  assert.deepEqual(bigTies(CASE), [SEVEN]);
+  assert.deepEqual(keepQuestion(CASE, []), { from: SEVEN });
+  assert.equal(keepQuestion([['a', 'b', 'c'], ['d']], []), null);
+  assert.deepEqual(keepQuestion([['a', 'b'], ['c', 'd', 'e', 'f']], [], { limit: 3 }), { from: ['c', 'd', 'e', 'f'] });
+});
+
+test('keeping one moves it above the rest, which stay tied', () => {
+  const { groups } = withKeeps(CASE, [{ from: SEVEN, keep: 'NOTE' }]);
+  assert.deepEqual(groups[0], ['NOTE']);
+  assert.deepEqual(groups[1], SEVEN.filter(x => x !== 'NOTE'));
+  assert.deepEqual(groups.slice(2), [['EXIT'], ['UPKEEP', 'COST']]);
+});
+
+test('"until three are left" asks again; "once per group" does not', () => {
+  const keeps = [{ from: SEVEN, keep: 'NOTE' }];
+  const rest = SEVEN.filter(x => x !== 'NOTE');
+  assert.deepEqual(keepQuestion(CASE, keeps, { repeat: true }), { from: rest });
+  assert.equal(keepQuestion(CASE, keeps, { repeat: false }), null);
+  // Keep going until three are left: 7 -> 6 -> 5 -> 4 -> 3 is four questions.
+  let ks = [], q, n = 0;
+  while ((q = keepQuestion(CASE, ks))) { ks = [...ks, { from: q.from, keep: q.from[q.from.length - 1] }]; n++; }
+  assert.equal(n, 4);
+  const { groups } = withKeeps(CASE, ks);
+  assert.equal(groups[4].length, 3);
+});
+
+test('"I can\'t pick one" keeps the tie and is not asked again', () => {
+  const keeps = [{ from: SEVEN, keep: '=' }];
+  assert.deepEqual(withKeeps(CASE, keeps).groups, CASE);
+  assert.equal(keepQuestion(CASE, keeps, { repeat: true }), null);
+});
+
+test('must-haves leave the ranking as gates, and the rest stay tied', () => {
+  const keeps = [{ from: SEVEN, gates: ['TAP', 'PRIV', 'CLAUDE'] }];
+  const { groups, gated } = withKeeps(CASE, keeps);
+  assert.deepEqual(gated, ['TAP', 'PRIV', 'CLAUDE']);
+  assert.deepEqual(groups[0], ['MEDIA', 'NOTE', 'FALL', 'META']);
+  // Four are still tied, so with repeat on the rest is asked again.
+  assert.deepEqual(keepQuestion(CASE, keeps), { from: ['MEDIA', 'NOTE', 'FALL', 'META'] });
+  // Turning a whole group into gates removes it.
+  assert.deepEqual(withKeeps([['a', 'b', 'c', 'd'], ['e']], [{ from: ['a', 'b', 'c', 'd'], gates: ['a', 'b', 'c', 'd'] }]).groups, [['e']]);
+});
+
+test('a keep answer for a group that no longer exists is left out', () => {
+  const { used, groups } = withKeeps(CASE, [{ from: ['X', 'Y', 'Z', 'W'], keep: 'X' }]);
+  assert.deepEqual(used, []); assert.deepEqual(groups, CASE);
+});
+
+test('keep answers read back from their copied text', () => {
+  const keeps = [{ from: SEVEN, keep: 'NOTE' }, { from: SEVEN.filter(x => x !== 'NOTE'), gates: ['TAP', 'PRIV'] },
+    { from: ['MEDIA', 'CLAUDE', 'FALL', 'META'], keep: '=' }];
+  const text = keeps.map(keepText).join('; ');
+  assert.equal(text, 'NOTE over MEDIA+CLAUDE+TAP+PRIV+FALL+META; gates TAP+PRIV of MEDIA+CLAUDE+TAP+PRIV+FALL+META; none of MEDIA+CLAUDE+FALL+META');
+  const back = parseKeeps(text);
+  assert.deepEqual(withKeeps(CASE, back).groups, withKeeps(CASE, keeps).groups);
+  assert.equal(parseKeeps('NOTE beats MEDIA'), null);
+});
