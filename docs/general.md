@@ -2,7 +2,7 @@
 
 > A decision-matrix-driven decision record: the decision is the output of a weighted comparison of viable alternatives, not an assertion made up front.
 >
-> **Method:** A weighted decision matrix scored with the **Weighted Sum Model (WSM)**, also known as Simple Additive Weighting (SAW), a standard **multi-criteria decision analysis (MCDA)** technique, with weights set by the decision owner through ordinal pairwise ranking, paired with explicit sensitivity and robustness analysis (dominance check, winning-margin and critical-weight analysis, Monte Carlo weight simulation, and rank-order, swap and score-flip tests).
+> **Method:** A weighted decision matrix scored with the **Weighted Sum Model (WSM)**, also known as Simple Additive Weighting (SAW), a standard **multi-criteria decision analysis (MCDA)** technique, with weights set by the decision owner through ordinal pairwise ranking, paired with explicit sensitivity and robustness analysis (dominance check, winning-margin and critical-weight analysis, Monte Carlo weight simulation, and rank-order, big-tie, swap and score-flip tests), plus **viability gates** that veto options without hiding them.
 >
 > **Scope:** This specification is **domain-general** and applies to decisions in any field. A [software-specific variant](https://alternatives.jonashw.dev/software.md) contextualized to architecture and engineering and a [storytelling variant](https://alternatives.jonashw.dev/storytelling.md) for story decisions are maintained separately.
 
@@ -14,6 +14,8 @@ Each AA document must include:
 2. Detailed exploration of at least two viable options, including comparative analysis.
 3. Explicit identification of trade-offs, including considerations like cost, scalability, sustainability, and reversibility.
 4. Final decision with clear justification.
+5. Requirements sorted into **gates** (must-haves) and **wants** (trade-offs) with the decision owner, before any scoring. Only wants become weighted criteria.
+6. A log of every **vetoed** option and the gate that stopped it.
 
 ---
 
@@ -87,6 +89,46 @@ Provide a high order level cost estimate of the recommended approach.
 
 ### Analysis
 
+#### Requirements: Gates and Wants
+
+Confirm the requirements with the decision owner before naming any criteria. Then sort each one with the decision owner:
+
+- **Gate (must-have).** An option that falls short is out, however well it does elsewhere. Gates are pass or fail and carry no weight.
+- **Want (trade-off).** The decision owner would give up some of it to get more of another. Only wants become criteria in the matrix.
+
+To sort one, ask: "If an option did everything else well but fell short on this, would you still consider it?" "No" makes it a gate. "Yes, but I'd mind" makes it a want. A requirement can be both: a floor that is a gate ("captures stay private to me") and more above the floor that is a want ("the fewer services that can see them, the better"). Write the floor as the gate and the rest as the criterion.
+
+Keep the requirement number on both, so every gate and criterion traces back to it. Record the sorting:
+
+| # | Requirement | Gate or want | Why (the decision owner's words) |
+|---|---|---|---|
+| *R1* | *One tap saves it* | *Want* | *"I'd still use it with two taps, but I'd mind"* |
+
+**Signs a requirement was sorted wrong:** the decision owner calls more than three criteria "about the same" at the top of the ranking (see Big ties under Weight Elicitation), or most options score at the floor on one criterion. Sort it again with the decision owner and re-run the gates.
+
+#### Viability Gates
+
+Gates are must-haves (see Requirements: Gates and Wants). Apply them **before** scoring. An option that fails a gate is **vetoed**: it is not scored, but it **must** be logged with the reason.
+
+| Option | Gate failed | Why (explained clearly) |
+|---|---|---|
+| *Vetoed option* | *e.g. Hard budget ceiling* | *Its yearly cost is twice the ceiling* |
+
+Suggested gates (adapt per decision):
+
+1. **Legal and policy.** Meets the law, regulations and any binding policy.
+2. **Hard budget ceiling.** Fits the most that can be spent, counting running costs.
+3. **Hard deadline.** Can be in place by a date that cannot move.
+4. **Safety.** Puts no one at unacceptable risk.
+
+**Zero-veto mode (alternative).** Instead of screening options out, a gate can sit in the matrix as a row with no weight, scored **0** (fails) or **1** (passes). Any 0 sets that option's total to 0:
+
+$$V_j = G_j \sum_{i=1}^{n} W_i S_{ij}, \qquad G_j = \prod_{g} \mathbb{1}[\text{gate } g \text{ passed}]$$
+
+The vetoed option stays visible in the matrix, which is the log. Robustness analysis runs on the options that passed. Use either mode, but record which one you used.
+
+**A gate made from a scored criterion** (for example, one the owner named a must-have during the ranking) passes where the option scores 3 or more on the 1 to 5 scale, unless the owner says otherwise. Record every case the owner switched.
+
 #### Alternative 1
 
 - **Pros**:
@@ -135,7 +177,7 @@ Organize criteria into layers:
 
 ##### Rules
 
-1. **Normalize weights.** All weights must sum to 1.0 (or 100).
+1. **Normalize weights.** All weights must sum to 1.0 (or 100). Gate rows carry no weight.
 2. **Standardize scoring.** Use a uniform integer scale (1–5 recommended) across all cells.
 3. **Anchor scores.** Define what each score level means for each criterion (e.g., 1 = poor, 5 = excellent). Include the anchor definitions in a footnote or companion table.
 4. **Include a summary row.** The final row must show the total weighted score ($V_j$) for each option.
@@ -155,6 +197,7 @@ The decision owner sets the weights, not the analyst. The analyst drafts weights
    - **Back and forward.** Let the owner step back at any time, including from the finished result. Stepping forward again keeps the answers stepped over.
    - **Review.** Let the owner go through a finished run one question at a time. Each question shows the earlier answer; the owner keeps it or picks another. A changed answer can lead to new questions, and those say they are new. Keeping every answer gives the same ranking.
    - **Check questions.** One insertion run cannot contradict itself, because it never asks an implied pair, but it often places neighbours without comparing them directly. At the end, re-ask a few neighbouring pairs (three by default), nearest the top first, where a flip moves the most weight. A reversal or "about the same" turns that pair into a tie. The owner may skip them.
+   - **Big ties.** When more than three criteria end up "about the same", the weights cannot separate them, and only the scores decide between the leading options on those rows. Ask about the group as a whole: "If you could only keep one of these, which?" The one kept moves just above the rest, which stay tied. The owner may also answer "I can't pick one", which keeps the tie, or "these are must-haves, not trade-offs", which turns the ones they name into gates (see Requirements: Gates and Wants) and takes them out of the weights. Ask every big group, top first, either until three are left or once per group, and record which. The owner may skip.
    - **Keep the run.** Save the answers with the order, so a reload or a paused run loses nothing.
    - **Seeding.** Either/or answers the owner already gave in discussion may seed the sort.
 4. **Or drag.** As an alternative, the owner drags a list into order. Where the owner has done both and the orders differ, the owner picks which one is the record.
@@ -162,7 +205,7 @@ The decision owner sets the weights, not the analyst. The analyst drafts weights
    - **Steep** (rank-order centroid): $W_i = \frac{1}{n}\sum_{k=i}^{n}\frac{1}{k}$
    - **Gentle** (rank-sum): $W_i = \frac{2(n + 1 - i)}{n(n + 1)}$
    - **Ties.** Tied neighbours share the mean of the weights for the ranks they span.
-6. **Keep the record.** Record the owner's ranking, the conversion, the full list of pairwise answers (for example `A > B, C = D`) and the check answers verbatim. The answers justify the ranking later. Keep the draft weights in the document for comparison.
+6. **Keep the record.** Record the owner's ranking, the conversion, the full list of pairwise answers (for example `A > B, C = D`), the check answers and the big-tie answers verbatim, and the requirements sorted into gates and wants. The answers justify the ranking later. Keep the draft weights in the document for comparison.
 7. **Use a live tool.** Give the owner a page that asks the questions (and allows dragging), shows the weights and the winning alternative live, and returns the ranking and answers as text to paste back. The copied text can be pasted back in later to reopen or review the run. A reusable one is the [Criteria Ranker](https://alternatives.jonashw.dev/toolkit/criteria-ranker.html).
 
 ##### Robustness
@@ -187,13 +230,17 @@ The criterion with the smallest feasible $|\delta_k|$ — one that keeps $W_k + 
 
 5. **Order-consistent simulation.** Once the owner has ranked the criteria, sample at least 10,000 random weight vectors that keep the owner's rank order (draw uniform values, sort them to match the order, normalize). Report win probabilities. This tests the ranking itself, independent of the conversion formula.
 
-6. **Adjacent-swap test.** Swap each pair of neighbours in the owner's ranking, one at a time, and report any swap that changes the winner.
+6. **Big-tie check.** Required when more than three criteria tie at the top. Tied criteria share one weight, so on those rows only the scores separate the options, and an order-consistent simulation looks more certain than it is. Report the lead of the top two under equal weights next to the lead under the owner's weights, and the share of the gap between them that comes from criteria inside the tie $T$:
+$$\text{share}_T = \frac{\sum_{k \in T} |W_k d_k|}{\sum_k |W_k d_k|}, \qquad d_k = S_{k,(1)} - S_{k,(2)}$$
+When more than half the gap comes from the tie, say that the scores decide the result more than the ranking does, and offer the big-tie question (see Weight Elicitation).
 
-7. **Single-score flip test.** Weights are not the only subjective input. Move each score by one point, one at a time, and list every change that flips the winner.
+7. **Adjacent-swap test.** Swap each pair of neighbours in the owner's ranking, one at a time, and report any swap that changes the winner.
 
-8. **Score-and-weight simulation.** Jitter the least certain scores by one point together with the weights, and report win probabilities.
+8. **Single-score flip test.** Weights are not the only subjective input. Move each score by one point, one at a time, and list every change that flips the winner.
 
-9. **Name the hinge.** State in one sentence what the decision actually depends on (a weight, a score, or neither), and put that question to the owner directly. Say which inputs are measured and which are estimates.
+9. **Score-and-weight simulation.** Jitter the least certain scores by one point together with the weights, and report win probabilities.
+
+10. **Name the hinge.** State in one sentence what the decision actually depends on (a weight, a score, or neither), and put that question to the owner directly. Say which inputs are measured and which are estimates.
 
 ### Diagrams
 
