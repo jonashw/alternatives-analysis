@@ -256,3 +256,26 @@ test('keep answers read back from their copied text', () => {
   assert.deepEqual(withKeeps(CASE, back).groups, withKeeps(CASE, keeps).groups);
   assert.equal(parseKeeps('NOTE beats MEDIA'), null);
 });
+
+import { overridden } from './pairwise.js';
+
+test('a tie chained by check answers names the earlier answers it overrides', () => {
+  const ids = ['TAP', 'NOTE', 'META', 'MEDIA', 'FALL', 'CLAUDE', 'PRIV', 'UPKEEP', 'COST', 'EXIT'];
+  const given = parseAnswers('MEDIA > EXIT, CLAUDE > EXIT, MEDIA > CLAUDE, NOTE > CLAUDE, NOTE = MEDIA, CLAUDE > UPKEEP, ' +
+    'EXIT > UPKEEP, TAP > EXIT, TAP = CLAUDE, PRIV = EXIT, FALL = EXIT, COST = EXIT, META = EXIT');
+  const state = start(shuffle(ids, 7), given);
+  const r = read(state);
+  assert.equal(r.question, null);
+  assert.equal(groupsOf(r.order, r.ties).length, 4);
+  assert.deepEqual(overridden(r.used, [], groupsOf(r.order, r.ties)), []);
+  const checks = [['NOTE', 'CLAUDE'], ['TAP', 'EXIT'], ['META', 'UPKEEP']].map(([a, b]) => ({ a, b, preferred: '=' }));
+  const groups = groupsOf(r.order, withChecks(state, checks).ties);
+  assert.equal(groups.length, 1);
+  const set = overridden(r.used, checks, groups).map(a => answerText(a)).sort();
+  assert.deepEqual(set, ['CLAUDE > EXIT', 'CLAUDE > UPKEEP', 'EXIT > UPKEEP', 'MEDIA > CLAUDE', 'MEDIA > EXIT']);
+});
+
+test('answers across separate groups are not overridden', () => {
+  assert.deepEqual(overridden([{ a: 'a', b: 'b', result: '>' }], [], [['a'], ['b']]), []);
+  assert.deepEqual(overridden([{ a: 'a', b: 'b', result: '>' }], [{ a: 'a', b: 'b', preferred: '=' }], [['a', 'b']]), []);
+});

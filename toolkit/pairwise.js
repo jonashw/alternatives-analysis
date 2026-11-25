@@ -185,6 +185,20 @@ export const parseAnswers = text => {
 export const checkAnswer = c => c.preferred === '=' ? { a: c.a, b: c.b, result: '=' }
   : { a: c.preferred, b: c.preferred === c.a ? c.b : c.a, result: '>' };
 
+/**
+ * Answers a tie group overrides. Ties chain: "A = B" and "B = C" put A, B and C in one group, even where an
+ * earlier answer said "A > C". Given the answers (questions, then checks; the latest per pair counts) and the
+ * tie groups, returns the "X > Y" answers whose two items now share a group, so the screen can say what was set aside.
+ */
+export const overridden = (answers, checks, groups) => {
+  const g = {};
+  groups.forEach((grp, i) => grp.forEach(id => { g[id] = i; }));
+  const latest = new Map();
+  for (const a of answers) latest.set(keyOf(a.a, a.b), a);
+  for (const c of checks) latest.set(keyOf(c.a, c.b), checkAnswer(c));
+  return [...latest.values()].filter(a => a.result === '>' && g[a.a] !== undefined && g[a.a] === g[a.b]);
+};
+
 // ---- Big ties: "If you could only keep one of these, which?" ----
 // After the questions and checks, a tie group with more than `limit` members (three by default) gets one more
 // question that names the whole group. A keep answer is { from: [the group], keep: id }: that item moves just above
