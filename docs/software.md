@@ -53,9 +53,13 @@ When a decision is revisited, write a **new AA that supersedes the old one**. Ne
 1. **Link both ways.** The new AA's **Supersedes** field links the old one. Once the new AA is `FINAL`, change only two things on the old one: its **Status** becomes `SUPERSEDED`, and its **Superseded by** field links the new AA. Leave the rest of the old AA untouched.
 2. **Say what changed.** Right after the Background, add a **What Changed** section. Cover what is new in the situation, which requirements, gates, criteria and alternatives were added, dropped or reworded, and the old result in one line.
 3. **Keep ids stable.** A requirement, criterion or alternative that means the same thing keeps its old id. A reworded one keeps its id and is listed under What Changed. A new one gets a new id, and a dropped id is never reused.
+   - **Split:** a requirement that splits keeps its id as a stem with letter suffixes, so R2 becomes R2a and R2b. This also covers a requirement that becomes a gate floor plus a want (R4a the gate, R4b the want). Each part names its parent in the Source column, for example "split from R2 in [old AA]". The parent counts as split, not dropped: What Changed lists "R2 split into R2a, R2b", and the bare id is never reused.
+   - **Merge:** requirements that merge keep the lowest of their ids. The merged requirement's Source lists the ids folded into it, and What Changed lists "R5 and R8 merged into R5".
+   - **Report every id.** What Changed sorts every old id into kept, reworded, split, merged or dropped, and lists the new ids.
 4. **Cite the old AA.** In the requirements table, a requirement that carries over names the old AA as its Source.
 5. **Rank again.** Changed criteria need fresh weights, so the decision owner ranks again in a new ranker. Give the new Criteria Ranker its own `DATA.key`, and leave the old ranker and its answers as they are.
 6. **Keep the chain.** If the old AA itself superseded another, don't repeat that history. The links already lead back through it.
+7. **Hand off as a new AA.** When one project or agent redoes an AA that another project owns, its handoff asks for a new superseding AA, never an edit to the old one, and never an "earlier pass" note folded into it. Only the project that owns the old AA changes its Status and Superseded by fields, and only once the new AA is `FINAL`.
 
 ---
 
