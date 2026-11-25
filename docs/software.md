@@ -14,7 +14,7 @@ Each AA document must include:
 2. Detailed exploration of at least two viable solutions, including comparative analysis.
 3. Explicit identification of trade-offs, including considerations like cost, scalability, maintainability, and reversibility.
 4. Final decision with clear justification.
-5. Requirements sorted into **gates** (must-haves) and **wants** (trade-offs) with the decision owner, before any scoring. Only wants become weighted criteria.
+5. Requirements sorted into **gates** (must-haves) and **wants** (trade-offs) with the decision owner, before any scoring. Only wants become weighted criteria. Each requirement is recorded in the requirements table with how it is tested, its source, and the gate or criterion it became.
 6. A log of every **vetoed** alternative and the gate that stopped it.
 
 ---
@@ -91,18 +91,52 @@ Provide a high order level cost estimate of the recommended approach.
 
 #### Requirements: Gates and Wants
 
-Confirm the requirements with the decision owner before naming any criteria. Then sort each one with the decision owner:
+Confirm the requirements with the decision owner before naming any criteria. A criterion can only be as clear as the requirement behind it, so write the requirements with care first. The rules below are a short subset of requirements-engineering practice (ISO/IEC/IEEE 29148, the INCOSE Guide for Writing Requirements, EARS; see Sources).
+
+##### Eliciting
+
+- **Start from real moments.** Ask "Tell me about the last time this went wrong" or "...went well" before asking what the decision owner wants. A requirement drawn from a real loss is sharper than one imagined (the critical-incident technique).
+- **Know who measures value.** Name whose value each requirement serves: the decision owner themselves, or the organization or users they stand in for. Write it in that voice (see Write in the voice of whoever measures value under Weight Elicitation).
+
+##### Writing each requirement
+
+- **One requirement per statement.** If it has an "and" joining two needs, split it.
+- **Open with the situation** when it only applies in one: "When a site blocks saving, I can still get it in". This is the event-driven form of EARS and of job stories ("When ___, I want to ___, so I can ___").
+- **No vague words.** "Little", "easy", "fast", "simple" and "user-friendly" mean different things to different readers. Give a number or define the level: "It costs me under $5 a month", not "It costs me little".
+- **The need, not a solution.** "My captures can leave with me if I switch", not "Has an export button".
+- **Same term, same thing.** Use one word for each thing throughout, and define any term a newcomer would not know.
+
+##### Sorting into gates and wants
 
 - **Gate (must-have).** An alternative that falls short is out, however well it does elsewhere. Gates are pass or fail and carry no weight.
 - **Want (trade-off).** The decision owner would give up some of it to get more of another. Only wants become criteria in the matrix.
 
 To sort one, ask: "If an alternative did everything else well but fell short on this, would you still consider it?" "No" makes it a gate. "Yes, but I'd mind" makes it a want. A requirement can be both: a floor that is a gate ("captures stay private to me") and more above the floor that is a want ("the fewer services that can see them, the better"). Write the floor as the gate and the rest as the criterion.
 
-Keep the requirement number on both, so every gate and criterion traces back to it. Record the sorting:
+##### The requirements table (required)
 
-| # | Requirement | Gate or want | Why (the decision owner's words) |
-|---|---|---|---|
-| *R1* | *One tap saves it* | *Want* | *"I'd still use it with two taps, but I'd mind"* |
+Record every requirement in one table. It is the record of what was asked for, and it traces each gate and criterion back to a need:
+
+| # | Requirement | Gate or want | Why (the decision owner's words) | How we tell | Source | Becomes |
+|---|---|---|---|---|---|---|
+| *R1* | *When I share a post, one tap saves it* | *Want* | *"I'd still use it with two taps, but I'd mind"* | *5 one tap; 3 two taps; 1 a form to fill in* | *Owner, kickoff* | *Criterion TAP* |
+| *R7* | *My captures stay private to me* | *Gate* | *"If anyone else can read them, it's out"* | *Passes if no third party can read captures and no key is stored on the phone* | *Owner, kickoff* | *Gate PRIV* |
+
+- **How we tell** (the fit criterion). For a gate: the pass test, concrete enough that two people would agree on the result. For a want: the score anchors, what 1, 3 and 5 look like (see Anchor scores).
+- **Source.** Who said it, and when or where.
+- **Becomes.** The gate or criterion id it turned into. Every gate and every matrix row names its requirement number, so any line of the result can be followed back through its scores to the requirement and the decision owner's words, and every requirement can be followed forward to where it counted.
+
+##### Quality review (before scoring)
+
+Check each requirement: is it **necessary** (someone would miss it), **unambiguous** (one reading), **singular** (one need), **verifiable** (the How we tell column is filled in), and **consistent** (no conflict with another)? Then check the set: is it **complete** (nothing the decision owner would add after the result), and is it **free of overlap** (see Check for overlap before the owner ranks)? Fix what fails before any alternative is scored.
+
+##### Completeness check (software)
+
+Walk a standard list of quality characteristics, such as ISO/IEC 25010 (functional suitability, performance efficiency, compatibility, interaction capability, reliability, security, maintainability, flexibility, safety), plus cost and exit. For each, ask the decision owner whether anything there would rule an alternative out or make one better. This catches the requirements nobody says out loud, such as backups, uptime, or who fixes it at 2 a.m. Where the decision owner keeps a reliability or security standard, list it here as a source.
+
+##### Read back, then baseline
+
+Read the requirements back to the decision owner in plain words, and get a yes before scoring. That table is the baseline. If a requirement changes afterwards, log the change (what, when, why) in the table, and re-ask any ranking answers given to the old words.
 
 **Signs a requirement was sorted wrong:** the decision owner calls more than three criteria "about the same" at the top of the ranking (see Big ties under Weight Elicitation), or most alternatives score at the floor on one criterion. Sort it again with the decision owner and re-run the gates.
 
@@ -259,3 +293,29 @@ Include diagrams where they clarify context or distinguish alternatives. At mini
 - **Per-alternative sketch** — for each viable alternative, a diagram showing how the components, data, or control flow differ from the others.
 
 Prefer a code-first, text-based format (e.g., Mermaid) so diagrams render in Markdown and can be generated and revised by both humans and automated agents. Agent-harness-specific visualization features (e.g., interactive widgets or canvases, such as those in Gemini or Claude) are equally acceptable where they aid understanding.
+
+## Sources
+
+The method draws on established practice. Where this spec and a source differ, the spec says why.
+
+**Decision analysis**
+- Belton, V. and Stewart, T. J. (2002). *Multiple Criteria Decision Analysis: An Integrated Approach.* Properties of good criteria, including judgmental independence and non-redundancy (see Check for overlap).
+- Department for Communities and Local Government (2009). *Multi-criteria analysis: a manual.* UK Government. Checks for double counting and mutual independence of preferences before weighting.
+- Keeney, R. L. (1992). *Value-Focused Thinking.* Fundamental versus means objectives (see Name the reason, not the feature).
+- Keeney, R. L. and Gregory, R. S. (2005). "Selecting attributes to measure the achievement of objectives." *Operations Research* 53(1). Attributes that are unambiguous, comprehensive, direct, operational and understandable.
+- Keeney, R. L. and Raiffa, H. (1976). *Decisions with Multiple Objectives.* Preferential independence, the condition a weighted sum relies on.
+- Edwards, W. and Barron, F. H. (1994). "SMARTS and SMARTER." *Organizational Behavior and Human Decision Processes* 60(3). Rank-order centroid weights (the steep conversion).
+- Hammond, J. S., Keeney, R. L. and Raiffa, H. (1999). *Smart Choices.* Even swaps, a way to trade criteria off without weights.
+
+**Requirements engineering**
+- ISO/IEC/IEEE 29148 (2018). *Requirements engineering.* Characteristics of good requirements: necessary, unambiguous, singular, verifiable, consistent, complete.
+- INCOSE (2023). *Guide to Writing Requirements.* Writing rules, including rationale on every requirement and no vague terms.
+- Mavin, A. et al. (2009). "Easy Approach to Requirements Syntax (EARS)." IEEE International Requirements Engineering Conference. The event-driven form "When ___, the ___ shall ___" (see Hold the situation constant).
+- Robertson, S. and Robertson, J. *Mastering the Requirements Process* (Volere template). The fit criterion: every requirement carries a test of whether it is met.
+- Klement, A. *When Coffee and Kale Compete* (job stories). "When ___, I want to ___, so I can ___."
+- Kano, N. et al. (1984). "Attractive quality and must-be quality." Must-be qualities map to gates, one-dimensional qualities to wants.
+- ISO/IEC 25010 (2023). *Product quality model* (see Completeness check, software).
+- Flanagan, J. C. (1954). "The critical incident technique." *Psychological Bulletin* 51(4) (see Start from real moments).
+
+**Why full sentences**
+- Semantic satiation: a phrase seen over and over can lose its meaning for a while, so criteria are written as full sentences rather than short labels.

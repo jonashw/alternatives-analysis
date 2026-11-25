@@ -30,7 +30,7 @@ Each story AA document must include:
 6. A list of **departures from reality**, when the story shows real things (see Departures from Reality).
 7. A final decision with clear justification.
 8. A log of every **vetoed** option and the gate that stopped it.
-9. The story's requirements sorted into **gates** (must-haves) and **wants** (trade-offs) with the director, before any scoring. Only wants become weighted criteria.
+9. The story's requirements sorted into **gates** (must-haves) and **wants** (trade-offs) with the director, before any scoring. Only wants become weighted criteria. Each requirement is recorded in the requirements table with how it is tested, its source, and the gate or criterion it became.
 
 ---
 
@@ -188,18 +188,48 @@ Effort replaces cost. Measure it as **time to a proof of concept**, meaning how 
 
 #### Requirements: Gates and Wants
 
-Confirm the requirements with the director before naming any criteria. Then sort each one with the director:
+Confirm the requirements with the director before naming any criteria. A criterion can only be as clear as the requirement behind it, so write the requirements with care first. The rules below are a short subset of requirements-engineering practice (ISO/IEC/IEEE 29148, the INCOSE Guide for Writing Requirements, EARS; see Sources).
+
+##### Eliciting
+
+- **Start from real moments.** Ask "Tell me about the last time this went wrong" or "...went well" before asking what the director wants. A requirement drawn from a real loss is sharper than one imagined (the critical-incident technique).
+- **Know who measures value.** Name whose value each requirement serves: the director themselves, or the organization or users they stand in for. Write it in that voice (see Write in the voice of whoever measures value under Weight Elicitation).
+
+##### Writing each requirement
+
+- **One requirement per statement.** If it has an "and" joining two needs, split it.
+- **Open with the situation** when it only applies in one: "When a site blocks saving, I can still get it in". This is the event-driven form of EARS and of job stories ("When ___, I want to ___, so I can ___").
+- **No vague words.** "Little", "easy", "fast", "simple" and "user-friendly" mean different things to different readers. Give a number or define the level: "It costs me under $5 a month", not "It costs me little".
+- **The need, not a solution.** "My captures can leave with me if I switch", not "Has an export button".
+- **Same term, same thing.** Use one word for each thing throughout, and define any term a newcomer would not know.
+
+##### Sorting into gates and wants
 
 - **Gate (must-have).** An option that falls short is out, however well it does elsewhere. Gates are pass or fail and carry no weight.
 - **Want (trade-off).** The director would give up some of it to get more of another. Only wants become criteria in the matrix.
 
 To sort one, ask: "If an option did everything else well but fell short on this, would you still consider it?" "No" makes it a gate. "Yes, but I'd mind" makes it a want. A requirement can be both: a floor that is a gate ("nothing frightening for the youngest viewers") and more above the floor that is a want ("the gentler, the better"). Write the floor as the gate and the rest as the criterion.
 
-Keep the requirement number on both, so every gate and criterion traces back to it. Record the sorting:
+##### The requirements table (required)
 
-| # | Requirement | Gate or want | Why (the director's words) |
-|---|---|---|---|
-| *R1* | *One tap saves it* | *Want* | *"I'd still use it with two taps, but I'd mind"* |
+Record every requirement in one table. It is the record of what was asked for, and it traces each gate and criterion back to a need:
+
+| # | Requirement | Gate or want | Why (the director's words) | How we tell | Source | Becomes |
+|---|---|---|---|---|---|---|
+| *R1* | *When the youngest viewers watch, nothing frightens them* | *Gate* | *"If it scares a five-year-old, it's out"* | *Passes if a read-through with the director flags no frightening moment* | *Director, first meeting* | *Gate GENTLE* |
+| *R2* | *When the scene is watched, the joke lands without explaining it* | *Want* | *"I want them to laugh, not be told why"* | *5 laughs on first watch; 3 a smile; 1 needs explaining* | *Director, first meeting* | *Criterion LAND* |
+
+- **How we tell** (the fit criterion). For a gate: the pass test, concrete enough that two people would agree on the result. For a want: the score anchors, what 1, 3 and 5 look like (see Anchor scores).
+- **Source.** Who said it, and when or where.
+- **Becomes.** The gate or criterion id it turned into. Every gate and every matrix row names its requirement number, so any line of the result can be followed back through its scores to the requirement and the director's words, and every requirement can be followed forward to where it counted.
+
+##### Quality review (before scoring)
+
+Check each requirement: is it **necessary** (someone would miss it), **unambiguous** (one reading), **singular** (one need), **verifiable** (the How we tell column is filled in), and **consistent** (no conflict with another)? Then check the set: is it **complete** (nothing the director would add after the result), and is it **free of overlap** (see Check for overlap before the owner ranks)? Fix what fails before any option is scored.
+
+##### Read back, then baseline
+
+Read the requirements back to the director in plain words, and get a yes before scoring. That table is the baseline. If a requirement changes afterwards, log the change (what, when, why) in the table, and re-ask any ranking answers given to the old words.
 
 **Signs a requirement was sorted wrong:** the director calls more than three criteria "about the same" at the top of the ranking (see Big ties under Weight Elicitation), or most options score at the floor on one criterion. Sort it again with the director and re-run the gates.
 
@@ -406,6 +436,7 @@ A simple table or hand sketch is acceptable. Where a reproducible format is pref
 - **Stuart Pugh:** the concept-selection matrix, which compares options and then combines their strengths into hybrids.
 - **Fritz Zwicky:** morphological analysis, a box of combinations for generating options.
 - **Two-way doors:** Jeff Bezos (2015 Amazon shareholder letter). A colleague of Jon's connected the idea to this method.
+- **Decision analysis and requirements engineering:** the sources listed under Sources in the [general variant](https://alternatives.jonashw.dev/general.md).
 
 ## First worked example
 
