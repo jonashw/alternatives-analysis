@@ -46,6 +46,19 @@ Apply these tests to a proposed decision. If **any** test is true, an AA is warr
 
 ---
 
+## Revisiting a Decision
+
+When a decision is revisited, write a **new AA that supersedes the old one**. Never rewrite the old AA: it is the record of what was known and decided at the time.
+
+1. **Link both ways.** The new AA's **Supersedes** field links the old one. Once the new AA is `FINAL`, change only two things on the old one: its **Status** becomes `SUPERSEDED`, and its **Superseded by** field links the new AA. Leave the rest of the old AA untouched.
+2. **Say what changed.** Right after the Background, add a **What Changed** section. Cover what is new in the situation, which requirements, gates, criteria and alternatives were added, dropped or reworded, and the old result in one line.
+3. **Keep ids stable.** A requirement, criterion or alternative that means the same thing keeps its old id. A reworded one keeps its id and is listed under What Changed. A new one gets a new id, and a dropped id is never reused.
+4. **Cite the old AA.** In the requirements table, a requirement that carries over names the old AA as its Source.
+5. **Rank again.** Changed criteria need fresh weights, so the decision owner ranks again in a new ranker. Give the new Criteria Ranker its own `DATA.key`, and leave the old ranker and its answers as they are.
+6. **Keep the chain.** If the old AA itself superseded another, don't repeat that history. The links already lead back through it.
+
+---
+
 ## AA Template Structure
 
 ### Metadata
@@ -54,7 +67,9 @@ Apply these tests to a proposed decision. If **any** test is true, an AA is warr
 |-------|-------------|
 | **Summary** | Summary of AA |
 | **Created** | Date of creation |
-| **Status** | `DRAFT` · `READY FOR REVIEW` · `FINAL` |
+| **Status** | `DRAFT` · `READY FOR REVIEW` · `FINAL` · `SUPERSEDED` |
+| **Supersedes** | The earlier AA this one replaces, linked, with its date (see Revisiting a Decision). Leave blank for a first AA |
+| **Superseded by** | Set only once a newer AA is final, linked. The only other field changed on a superseded AA is its Status |
 
 ### Background
 
@@ -306,6 +321,9 @@ The method draws on established practice. Where this spec and a source differ, t
 - Keeney, R. L. and Raiffa, H. (1976). *Decisions with Multiple Objectives.* Preferential independence, the condition a weighted sum relies on.
 - Edwards, W. and Barron, F. H. (1994). "SMARTS and SMARTER." *Organizational Behavior and Human Decision Processes* 60(3). Rank-order centroid weights (the steep conversion).
 - Hammond, J. S., Keeney, R. L. and Raiffa, H. (1999). *Smart Choices.* Even swaps, a way to trade criteria off without weights.
+
+**Decision records**
+- Nygard, M. (2011). "Documenting Architecture Decisions." Decision records are immutable; a later decision supersedes an earlier one, and the earlier one's status says so (see Revisiting a Decision).
 
 **Requirements engineering**
 - ISO/IEC/IEEE 29148 (2018). *Requirements engineering.* Characteristics of good requirements: necessary, unambiguous, singular, verifiable, consistent, complete.

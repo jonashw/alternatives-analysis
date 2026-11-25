@@ -124,6 +124,19 @@ The [Criteria Ranker](https://alternatives.jonashw.dev/toolkit/criteria-ranker.h
 
 ---
 
+## Revisiting a Decision
+
+When a decision is revisited, write a **new AA that supersedes the old one**. Never rewrite the old AA: it is the record of what was known and decided at the time.
+
+1. **Link both ways.** The new AA's **Supersedes** field links the old one. Once the new AA is `FINAL`, change only two things on the old one: its **Status** becomes `SUPERSEDED`, and its **Superseded by** field links the new AA. Leave the rest of the old AA untouched.
+2. **Say what changed.** Right after the Background, add a **What Changed** section. Cover what is new in the situation, which requirements, gates, criteria and alternatives were added, dropped or reworded, and the old result in one line.
+3. **Keep ids stable.** A requirement, criterion or alternative that means the same thing keeps its old id. A reworded one keeps its id and is listed under What Changed. A new one gets a new id, and a dropped id is never reused.
+4. **Cite the old AA.** In the requirements table, a requirement that carries over names the old AA as its Source.
+5. **Rank again.** Changed criteria need fresh weights, so the decision owner ranks again in a new ranker. Give the new Criteria Ranker its own `DATA.key`, and leave the old ranker and its answers as they are.
+6. **Keep the chain.** If the old AA itself superseded another, don't repeat that history. The links already lead back through it.
+
+---
+
 ## AA Template Structure
 
 ### Metadata
@@ -132,7 +145,9 @@ The [Criteria Ranker](https://alternatives.jonashw.dev/toolkit/criteria-ranker.h
 |-------|-------------|
 | **Summary** | The story question in one line |
 | **Created** | Date of creation |
-| **Status** | `DRAFT` · `READY FOR REVIEW` · `FINAL` |
+| **Status** | `DRAFT` · `READY FOR REVIEW` · `FINAL` · `SUPERSEDED` |
+| **Supersedes** | The earlier AA this one replaces, linked, with its date (see Revisiting a Decision). Leave blank for a first AA |
+| **Superseded by** | Set only once a newer AA is final, linked. The only other field changed on a superseded AA is its Status |
 | **Source author** | Whose material this touches (their words are never changed without their say) |
 | **Scorer bias** | Who proposed which options, and any leaning declared *before* scoring |
 | **Parent / parts** | For a part: its parent AA. For a parent: the list of its parts (see Decisions Made of Parts) |
