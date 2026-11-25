@@ -10,15 +10,18 @@ The specification comes in three variants. Pick the one that fits the decision:
 
 ### What differs between the variants
 
-All three share the method: requirements sorted into gates and wants, viability gates, a weighted matrix, the owner's pairwise ranking (with the big-tie question) and the robustness tests. They differ in words, examples and a few extras.
+All three share the method: requirements written and checked with requirements-engineering practice (a required requirements table that traces each one to a gate or criterion), sorted into gates and wants, viability gates, criteria in the owner's voice with the situation held constant, a weighted matrix, the owner's pairwise ranking (with the big-tie question) and the robustness tests. They differ in words, examples and a few extras.
 
 | | General | Software | Storytelling |
 |---|---|---|---|
 | Who sets the weights | Decision owner | Decision owner | Director |
 | When to do one | Novelty, reach, one-way door, commitment, disruption | New technology, cross-team reach, data change, one-way door, structural change | Story-specific tests, plus lighter tools when an AA is too much |
 | Row categories | Objective fit, resources, outcomes, operations | Functional fit, business constraints, quality attributes, operations | Source fit, meaning, audience experience, production fit, future |
+| Whose voice the criteria use | The decision owner's, or the org's or users' when the owner is a proxy | The decision owner's, or the org's or users' when the owner is a proxy | The director's, or the audience's |
 | Suggested gates | Legal and policy, budget, deadline, safety | Security and compliance, required integration, budget, deadline, supportable | Source words, audience safety, ownership, true to the facts, works unattended |
-| Extras | None | Context diagram and per-alternative sketch | Parts and roll-up, settings of use, wild option, But / Therefore, two voices, departures from reality, director's delight score |
+| Extras | None | Completeness check (ISO/IEC 25010 quality list), context diagram and per-alternative sketch | Parts and roll-up, settings of use, wild option, But / Therefore, two voices, departures from reality, director's delight score |
+
+The decision-analysis and requirements-engineering sources are listed under Sources in the General and Software pages.
 
 Each page is also served as raw Markdown at the `.md` URL linked above, for agents and tools that consume the source directly.
 
