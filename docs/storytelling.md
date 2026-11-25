@@ -138,6 +138,8 @@ When a decision is revisited, write a **new AA that supersedes the old one**. Ne
 5. **Rank again.** Changed criteria need fresh weights, so the decision owner ranks again in a new ranker. Give the new Criteria Ranker its own `DATA.key`, and leave the old ranker and its answers as they are.
 6. **Keep the chain.** If the old AA itself superseded another, don't repeat that history. The links already lead back through it.
 7. **Hand off as a new AA.** When one project or agent redoes an AA that another project owns, its handoff asks for a new superseding AA, never an edit to the old one, and never an "earlier pass" note folded into it. Only the project that owns the old AA changes its Status and Superseded by fields, and only once the new AA is `FINAL`.
+8. **Old AA without ids.** If the old AA never numbered its requirements, criteria or alternatives, the new AA numbers them for the first time. What Changed names each old item by its wording (in quotes), gives the id it now has, and sorts it into kept, reworded, split, merged or dropped as usual. From then on those ids follow the rules above.
+9. **Superseding more than one AA.** When two AAs turn out to be one decision, one new AA can supersede both. List each in Supersedes, account for every item of each in What Changed, and cite each as Source for what it carries over. Each old AA gets the same Status and Superseded by change, made by the project that owns it.
 
 ---
 
@@ -149,9 +151,11 @@ When a decision is revisited, write a **new AA that supersedes the old one**. Ne
 |-------|-------------|
 | **Summary** | The story question in one line |
 | **Created** | Date of creation |
-| **Status** | `DRAFT` · `READY FOR REVIEW` · `FINAL` · `SUPERSEDED` |
-| **Supersedes** | The earlier AA this one replaces, linked, with its date (see Revisiting a Decision). Leave blank for a first AA |
+| **Status** | `DRAFT` · `READY FOR REVIEW` · `DEFERRED` · `FINAL` · `SUPERSEDED` |
+| **Supersedes** | The earlier AA or AAs this one replaces, linked, with their dates (see Revisiting a Decision). Leave blank for a first AA |
 | **Superseded by** | Set only once a newer AA is final, linked. The only other field changed on a superseded AA is its Status |
+| **Decision trigger** | Only for a `DEFERRED` AA: the event that forces the decision, how that event is noticed (by whom or by what, and how it reaches the decision owner), and how soon after it the decision is made. Not called a gate: a gate is a must-have (see Requirements: Gates and Wants) |
+| **Check back** | Only for a `DEFERRED` AA: a date to re-read the trigger even if it has not fired |
 | **Source author** | Whose material this touches (their words are never changed without their say) |
 | **Scorer bias** | Who proposed which options, and any leaning declared *before* scoring |
 | **Parent / parts** | For a part: its parent AA. For a parent: the list of its parts (see Decisions Made of Parts) |
@@ -178,6 +182,8 @@ Each setting can bring its own gates. The standard one is **Works unattended**: 
 ### Decision
 
 A decision summary, in the story's own terms (name the options in plain words, not letters).
+
+**A deferred decision.** When the right choice depends on something that has not happened yet, set Status to `DEFERRED`. Name the Decision trigger and a Check back date, say what stays in place until then (the default), and write here what the trigger will settle. When the trigger fires or the check-back date comes, finish the AA to `FINAL`. A deferral needs a trigger someone or something will notice: if nobody would see the event happen, build or name the alert first, or decide now.
 
 ### Proposal
 
